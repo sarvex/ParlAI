@@ -127,19 +127,17 @@ class TurnAnnotationsStaticBlueprint(StaticReactBlueprint):
         if self.args.blueprint.annotation_indices_jsonl:
             self.annotation_indices = []
             with open(
-                self.args.blueprint.annotation_indices_jsonl, "r", encoding="utf-8-sig"
-            ) as f:
-                line = f.readline()
-                while line:
+                        self.args.blueprint.annotation_indices_jsonl, "r", encoding="utf-8-sig"
+                    ) as f:
+                while line := f.readline():
                     conversation_indices = json.loads(line)
                     self.annotation_indices.append(conversation_indices)
-                    line = f.readline()
             if len(self.annotation_indices) != len(self.raw_data):
                 raise Exception(
                     f'Cannot specify a different length of annotation indices ({len(self.annotation_indices)}) than conversations ({len(self.raw_data)}).'
                 )
-            # TODO: should check that utterances specified are all bot
-            # utterances (agent_idx == 1)
+                # TODO: should check that utterances specified are all bot
+                # utterances (agent_idx == 1)
 
         if self.conversation_count:
             self.raw_data = self.raw_data[: self.conversation_count]
@@ -325,11 +323,9 @@ class TurnAnnotationsStaticInFlightQABlueprint(TurnAnnotationsStaticBlueprint):
 
         raw_qc_convos = []
         with open(self.args.blueprint.onboarding_in_flight_data, "r") as f:
-            line = f.readline()
-            while line:
+            while line := f.readline():
                 qc_convo = json.loads(line)
                 raw_qc_convos.append(qc_convo)
-                line = f.readline()
         # Annotate all the utterances in the quality controls
         # So annotation_indices=None here
         self.quality_control_convos = self.process_data(

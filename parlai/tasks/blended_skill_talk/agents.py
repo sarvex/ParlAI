@@ -40,14 +40,14 @@ def raw_data_path(opt: Opt) -> str:
     # Build the data if it doesn't exist.
     build(opt)
     dt = opt['datatype'].split(':')[0]
-    return os.path.join(opt['datapath'], 'blended_skill_talk', dt + '.json')
+    return os.path.join(opt['datapath'], 'blended_skill_talk', f'{dt}.json')
 
 
 def _processed_data_path(opt: Opt) -> str:
     # Build the data if it doesn't exist.
     build(opt)
     dt = opt['datatype'].split(':')[0]
-    return os.path.join(opt['datapath'], 'blended_skill_talk', dt + '.txt')
+    return os.path.join(opt['datapath'], 'blended_skill_talk', f'{dt}.txt')
 
 
 def _persona_list_path(opt: Opt) -> str:
@@ -299,8 +299,8 @@ class PersonaTopicifier:
         with PathManager.open(self.topic_to_persona_path, 'r') as f:
             for line in f:
                 match = re.fullmatch(r'([^[]+): (\[.+\])\n', line)
-                topic = match.group(1)
-                persona_strings = eval(match.group(2))
+                topic = match[1]
+                persona_strings = eval(match[2])
                 assert isinstance(persona_strings, list)
                 topics_to_persona_strings[topic] = persona_strings
                 for str_ in persona_strings:
@@ -315,13 +315,9 @@ class PersonaTopicifier:
         """
         Very rudimentary way to calculate word overlap.
         """
-        score = 0
         tokens_a = a.split(' ')
         tokens_a = [ta for ta in tokens_a if len(ta) >= 5]
-        for ta in tokens_a:
-            if ta in b:
-                score += 1
-
+        score = sum(1 for ta in tokens_a if ta in b)
         tokens_b = b.split(' ')
         tokens_b = [tb for tb in tokens_b if len(tb) >= 5]
         for tb in tokens_b:
@@ -357,9 +353,8 @@ class PersonaTopicifier:
                     return persona
         if self.no_persona_is_error:
             raise ValueError(f'ERROR: Found no persona for topic: {topic}.')
-        else:
-            warn_once(f'Found no persona for topic: {topic}. Returning first persona.')
-            return self.personas[0]
+        warn_once(f'Found no persona for topic: {topic}. Returning first persona.')
+        return self.personas[0]
 
     def __choose_topic(self, persona):
         persona_lines = persona.strip().split('\n')
@@ -368,9 +363,7 @@ class PersonaTopicifier:
             p_str = p_str.strip()
             if p_str in self.persona_strings_to_wow_topics_map:
                 topics = self.persona_strings_to_wow_topics_map[p_str]
-                topic = topics[0] + '\n'
-                return topic
-
+                return topics[0] + '\n'
         for utt, topics in self.persona_strings_to_wow_topics_map.items():
             utt_words = utt.split()
             utt_words_long = [utt for utt in utt_words if len(utt) > 6]
@@ -408,15 +401,9 @@ class PersonaTopicifier:
         elif has_wow_topic_only:
             # Will occur with Wizard
             parts = text.strip().split('\n')
-            if len(parts) > 1:
-                topic = parts[0] + '\n'
-                utt = parts[1]
-                persona = self.__choose_persona_from_topic(topic)
-            else:
-                # Only has a topic, no utterance
-                topic = parts[0] + '\n'
-                utt = ''
-                persona = self.__choose_persona_from_topic(topic)
+            topic = parts[0] + '\n'
+            utt = parts[1] if len(parts) > 1 else ''
+            persona = self.__choose_persona_from_topic(topic)
         elif has_persona_only:
             # Will occur with Convai2
             lines = text.strip().split('\n')
@@ -426,8 +413,7 @@ class PersonaTopicifier:
         else:
             raise Exception(f'Unknown structure of utterance: {text}')
 
-        modified_utterance = persona + topic + utt
-        return modified_utterance
+        return persona + topic + utt
 
 
 class AllTeacher(MultiTaskTeacher):
@@ -468,11 +454,7 @@ class ContextGenerator:
         opt: only a 'datapath' key is required, to specify the ParlAI data folder
         """
 
-        if seed is not None:
-            self.rng = random.Random(seed)
-        else:
-            self.rng = random.Random()
-
+        self.rng = random.Random(seed) if seed is not None else random.Random()
         convai2_opt = Opt({'datapath': opt['datapath'], 'datatype': datatype})
         self.convai2_teacher = BothTeacher(convai2_opt)
 
@@ -526,7 +508,6 @@ class ContextGenerator:
             context_dataset = 'wizard_of_wikipedia'
 
         if context_dataset == 'convai2':
-
             # Select episode
             episode_idx = self.rng.randrange(self.convai2_teacher.num_episodes())
 
@@ -543,10 +524,9 @@ class ContextGenerator:
             # Don't select the first entry, which often doesn't include an apprentice
             # utterance
             chosen_entry = self.convai2_teacher.get(episode_idx, entry_idx=entry_idx)
-            person1_seed_utterance = chosen_entry['text']
             assert len(chosen_entry['labels']) == 1
             person2_seed_utterance = chosen_entry['labels'][0]
-
+            person1_seed_utterance = chosen_entry['text']
             return {
                 'context_dataset': context_dataset,
                 'persona_1_strings': selected_persona_1_strings,
@@ -557,7 +537,6 @@ class ContextGenerator:
             }
 
         elif context_dataset == 'empathetic_dialogues':
-
             # Select episode
             persona_episode_idx = self.rng.randrange(
                 self.convai2_teacher.num_episodes()
@@ -576,11 +555,10 @@ class ContextGenerator:
             episode_idx = self.rng.randrange(self.ed_teacher.num_episodes())
             entry_idx = 0  # We'll only use the first pair of utterances
             entry = self.ed_teacher.get(episode_idx, entry_idx=entry_idx)
-            situation = entry['situation']
-            speaker_utterance = entry['text']
             assert len(entry['labels']) == 1
+            situation = entry['situation']
             listener_response = entry['labels'][0]
-
+            speaker_utterance = entry['text']
             return {
                 'context_dataset': context_dataset,
                 'persona_1_strings': selected_persona_1_strings,
@@ -591,7 +569,6 @@ class ContextGenerator:
             }
 
         elif context_dataset == 'wizard_of_wikipedia':
-
             # Pull different personas until you get a pair for which at least one
             # sentence has a WoW topic bound to it
             num_tries = 0
@@ -603,7 +580,7 @@ class ContextGenerator:
                 persona_episode_idx = self.rng.randrange(
                     self.convai2_teacher.num_episodes()
                 )
-                all_persona_strings = dict()
+                all_persona_strings = {}
                 all_persona_strings[1], all_persona_strings[2] = self._extract_personas(
                     persona_episode_idx
                 )
@@ -615,7 +592,7 @@ class ContextGenerator:
                         wow_topics = self.persona_strings_to_wow_topics[str_]
                         if len(wow_topics) > 0:
                             matching_persona_string_idxes.append((persona_idx, str_idx))
-                if len(matching_persona_string_idxes) > 0:
+                if matching_persona_string_idxes:
                     break
 
             print(
@@ -670,10 +647,10 @@ class ContextGenerator:
             # two valid utterances and which will not usually be so far along in the
             # conversation that the new Turkers will be confused
             entry = self.wow_teacher.get(episode_idx, entry_idx=entry_idx)
-            apprentice_utterance = entry['text']
             assert len(entry['labels']) == 1
             wizard_utterance = entry['labels'][0]
 
+            apprentice_utterance = entry['text']
             return {
                 'context_dataset': context_dataset,
                 'persona_1_strings': selected_persona_1_strings,
@@ -694,10 +671,10 @@ class ContextGenerator:
         with PathManager.open(self.topic_to_persona_path, 'r') as f:
             for line in f:
                 match = re.fullmatch(r'([^[]+): (\[.+\])\n', line)
-                topic = match.group(1)
+                topic = match[1]
                 if topic not in self.wow_topics_to_episode_idxes:
                     continue
-                persona_strings = eval(match.group(2))
+                persona_strings = eval(match[2])
                 assert isinstance(persona_strings, list)
                 for str_ in persona_strings:
                     persona_strings_to_topics[str_].append(topic)

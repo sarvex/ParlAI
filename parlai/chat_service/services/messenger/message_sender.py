@@ -51,14 +51,10 @@ def create_reply_option(title, payload=''):
     """
     assert (
         len(title) <= MAX_QUICK_REPLY_TITLE_CHARS
-    ), 'Quick reply title length {} greater than the max of {}'.format(
-        len(title), MAX_QUICK_REPLY_TITLE_CHARS
-    )
+    ), f'Quick reply title length {len(title)} greater than the max of {MAX_QUICK_REPLY_TITLE_CHARS}'
     assert (
         len(payload) <= MAX_POSTBACK_CHARS
-    ), 'Payload length {} greater than the max of {}'.format(
-        len(payload), MAX_POSTBACK_CHARS
-    )
+    ), f'Payload length {len(payload)} greater than the max of {MAX_POSTBACK_CHARS}'
     return {'content_type': 'text', 'title': title, 'payload': payload}
 
 
@@ -87,11 +83,13 @@ def create_text_message(text, quick_replies=None):
             len(quick_replies), MAX_QUICK_REPLIES
         )
     for i in range(len(tokens)):
-        if tokens[i] == '[*SPLIT*]':
-            if ' '.join(tokens[cutoff : i - 1]).strip() != '':
-                splits.append(_message(' '.join(tokens[cutoff:i]), None))
-                cutoff = i + 1
-                curr_length = 0
+        if (
+            tokens[i] == '[*SPLIT*]'
+            and ' '.join(tokens[cutoff : i - 1]).strip() != ''
+        ):
+            splits.append(_message(' '.join(tokens[cutoff:i]), None))
+            cutoff = i + 1
+            curr_length = 0
         if curr_length + len(tokens[i]) > MAX_TEXT_CHARS:
             splits.append(_message(' '.join(tokens[cutoff:i]), None))
             cutoff = i
@@ -112,9 +110,7 @@ def create_attachment_message(attachment_item, quick_replies=None):
     if quick_replies:
         assert (
             len(quick_replies) <= MAX_QUICK_REPLIES
-        ), 'Number of quick replies {} greater than the max of {}'.format(
-            len(quick_replies), MAX_QUICK_REPLIES
-        )
+        ), f'Number of quick replies {len(quick_replies)} greater than the max of {MAX_QUICK_REPLIES}'
         payload['quick_replies'] = quick_replies
     return [payload]
 
@@ -200,15 +196,14 @@ class MessageSender:
             payload['persona_id'] = persona_id
         response = requests.post(api_address, params=self.auth_args, json=message)
         result = response.json()
-        if 'error' in result:
-            if result['error']['code'] == 1200:
-                # temporary error please retry
-                response = requests.post(
-                    api_address, params=self.auth_args, json=message
-                )
-                result = response.json()
+        if 'error' in result and result['error']['code'] == 1200:
+            # temporary error please retry
+            response = requests.post(
+                api_address, params=self.auth_args, json=message
+            )
+            result = response.json()
         log_utils.print_and_log(
-            logging.INFO, '"Facebook response from message send: {}"'.format(result)
+            logging.INFO, f'"Facebook response from message send: {result}"'
         )
         return result
 
@@ -235,15 +230,14 @@ class MessageSender:
                 payload['persona_id'] = persona_id
             response = requests.post(api_address, params=self.auth_args, json=payload)
             result = response.json()
-            if 'error' in result:
-                if result['error']['code'] == 1200:
-                    # temporary error please retry
-                    response = requests.post(
-                        api_address, params=self.auth_args, json=payload
-                    )
-                    result = response.json()
+            if 'error' in result and result['error']['code'] == 1200:
+                # temporary error please retry
+                response = requests.post(
+                    api_address, params=self.auth_args, json=payload
+                )
+                result = response.json()
             log_utils.print_and_log(
-                logging.INFO, '"Facebook response from message send: {}"'.format(result)
+                logging.INFO, f'"Facebook response from message send: {result}"'
             )
             results.append(result)
         return results
@@ -257,7 +251,7 @@ class MessageSender:
         response = requests.post(api_address, params=self.auth_args, json=message)
         result = response.json()
         log_utils.print_and_log(
-            logging.INFO, '"Facebook response from create persona: {}"'.format(result)
+            logging.INFO, f'"Facebook response from create persona: {result}"'
         )
         return result
 
@@ -265,11 +259,11 @@ class MessageSender:
         """
         Deletes the persona.
         """
-        api_address = 'https://graph.facebook.com/' + persona_id
+        api_address = f'https://graph.facebook.com/{persona_id}'
         response = requests.delete(api_address, params=self.auth_args)
         result = response.json()
         log_utils.print_and_log(
-            logging.INFO, '"Facebook response from delete persona: {}"'.format(result)
+            logging.INFO, f'"Facebook response from delete persona: {result}"'
         )
         return result
 
@@ -318,7 +312,6 @@ class MessageSender:
                 )
         result = response.json()
         log_utils.print_and_log(
-            logging.INFO,
-            '"Facebook response from attachment upload: {}"'.format(result),
+            logging.INFO, f'"Facebook response from attachment upload: {result}"'
         )
         return result

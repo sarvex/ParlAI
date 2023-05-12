@@ -55,21 +55,24 @@ class AddLabelFixedCandsTRA(TorchRankerAgent):
             else batch.image.size(0)
         )
 
-        if source == 'fixed' and label_inds is None and self.add_label_to_fixed_cands:
-            # Add label to fixed cands
-            if label_vecs is not None:
-                label_inds = label_vecs.new_empty((batchsize))
-                for batch_idx, label_vec in enumerate(label_vecs):
-                    max_c_len = cand_vecs.size(1)
-                    label_vec_pad = label_vec.new_zeros(max_c_len).fill_(self.NULL_IDX)
-                    if max_c_len < len(label_vec):
-                        label_vec = label_vec[0:max_c_len]
-                    label_vec_pad[0 : label_vec.size(0)] = label_vec
-                    label_inds[batch_idx] = self._find_match(cand_vecs, label_vec_pad)
-                    if label_inds[batch_idx] == -1:
-                        cand_vecs = torch.cat((cand_vecs, label_vec_pad.unsqueeze(0)))
-                        cands.append(batch.labels[batch_idx])
-                        label_inds[batch_idx] = len(cands) - 1
+        if (
+            source == 'fixed'
+            and label_inds is None
+            and self.add_label_to_fixed_cands
+            and label_vecs is not None
+        ):
+            label_inds = label_vecs.new_empty((batchsize))
+            for batch_idx, label_vec in enumerate(label_vecs):
+                max_c_len = cand_vecs.size(1)
+                label_vec_pad = label_vec.new_zeros(max_c_len).fill_(self.NULL_IDX)
+                if max_c_len < len(label_vec):
+                    label_vec = label_vec[:max_c_len]
+                label_vec_pad[:label_vec.size(0)] = label_vec
+                label_inds[batch_idx] = self._find_match(cand_vecs, label_vec_pad)
+                if label_inds[batch_idx] == -1:
+                    cand_vecs = torch.cat((cand_vecs, label_vec_pad.unsqueeze(0)))
+                    cands.append(batch.labels[batch_idx])
+                    label_inds[batch_idx] = len(cands) - 1
 
         return (cands, cand_vecs, label_inds)
 
@@ -106,8 +109,7 @@ class BiencoderAgent(TransformerRankerAgent):
         """
         kwargs['add_start'] = True
         kwargs['add_end'] = True
-        obs = TorchRankerAgent.vectorize(self, *args, **kwargs)
-        return obs
+        return TorchRankerAgent.vectorize(self, *args, **kwargs)
 
     def _vectorize_text(self, *args, **kwargs):
         """

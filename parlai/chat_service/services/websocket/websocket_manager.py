@@ -114,10 +114,10 @@ class WebsocketManager(ChatServiceManager):
                     )
                     # enough agents in pool to start new conversation
                     self.conversation_index += 1
-                    task_id = 't_{}'.format(self.conversation_index)
+                    task_id = f't_{self.conversation_index}'
 
                     # Add the required number of valid agents to the conv
-                    agent_states = [w for w in agent_pool[:needed_agents]]
+                    agent_states = list(agent_pool[:needed_agents])
                     agents = []
                     for state in agent_states:
                         agent = self._create_agent(task_id, state.get_id())

@@ -50,7 +50,7 @@ def _load_personas(opt):
                     a2_persona.append(t)
             personas.add('\n'.join(a1_persona))
             personas.add('\n'.join(a2_persona))
-    print('[ loaded ' + str(len(personas)) + ' personas ]')
+    print(f'[ loaded {len(personas)} personas ]')
     return list(personas)
 
 

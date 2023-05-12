@@ -32,30 +32,30 @@ def _transpose_hidden_state(hidden_state):
     elif torch.is_tensor(hidden_state):
         return hidden_state.transpose(0, 1)
     else:
-        raise ValueError("Don't know how to transpose {}".format(hidden_state))
+        raise ValueError(f"Don't know how to transpose {hidden_state}")
 
 
 def opt_to_kwargs(opt):
     """
     Get kwargs for seq2seq from opt.
     """
-    kwargs = {}
-    for k in [
-        'numlayers',
-        'dropout',
-        'bidirectional',
-        'rnn_class',
-        'lookuptable',
-        'decoder',
-        'numsoftmax',
-        'attention',
-        'attention_length',
-        'attention_time',
-        'input_dropout',
-    ]:
-        if k in opt:
-            kwargs[k] = opt[k]
-    return kwargs
+    return {
+        k: opt[k]
+        for k in [
+            'numlayers',
+            'dropout',
+            'bidirectional',
+            'rnn_class',
+            'lookuptable',
+            'decoder',
+            'numsoftmax',
+            'attention',
+            'attention_length',
+            'attention_time',
+            'input_dropout',
+        ]
+        if k in opt
+    }
 
 
 class Seq2seq(TorchGeneratorModel):
@@ -163,11 +163,7 @@ class Seq2seq(TorchGeneratorModel):
         hidden = _transpose_hidden_state(hidden)
 
         # LSTM or GRU/RNN hidden state?
-        if isinstance(hidden, torch.Tensor):
-            hid, cell = hidden, None
-        else:
-            hid, cell = hidden
-
+        hid, cell = (hidden, None) if isinstance(hidden, torch.Tensor) else hidden
         if not torch.is_tensor(indices):
             # cast indices to a tensor if needed
             indices = torch.LongTensor(indices).to(hid.device)
@@ -521,14 +517,13 @@ class OutputLayer(nn.Module):
             self.prior = nn.Linear(hiddensize, numsoftmax, bias=False)
             self.latent = nn.Linear(hiddensize, numsoftmax * embeddingsize)
             self.activation = nn.Tanh()
+        elif hiddensize == embeddingsize:
+            # no need for any transformation here
+            self.o2e = Identity()
+
         else:
-            # rnn output to embedding
-            if hiddensize != embeddingsize:
-                # learn projection to correct dimensions
-                self.o2e = nn.Linear(hiddensize, embeddingsize, bias=True)
-            else:
-                # no need for any transformation here
-                self.o2e = Identity()
+            # learn projection to correct dimensions
+            self.o2e = nn.Linear(hiddensize, embeddingsize, bias=True)
 
     def forward(self, input):
         """

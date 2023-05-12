@@ -91,8 +91,7 @@ def get_forced_decoder_inputs(
         tens = start_param.detach().expand(bsz, 1).to(inputs)
     else:
         tens = torch.LongTensor([start_idx]).expand(inputs.size(0), 1).to(inputs)
-    dec_inputs = torch.cat([tens, inputs], 1)
-    return dec_inputs  # type: ignore
+    return torch.cat([tens, inputs], 1)
 
 
 class RagModelInterface(ABC):
@@ -486,8 +485,7 @@ class RagSequence(RagModelInterface):
                     )
                 else:
                     marginalized_hypos[hypo_tokens] = [hypo, score]
-        sorted_by_score = sorted(marginalized_hypos.values(), key=lambda h: -h[1])
-        return sorted_by_score
+        return sorted(marginalized_hypos.values(), key=lambda h: -h[1])
 
     @classmethod
     def thorough_generation(
@@ -521,10 +519,7 @@ class RagSequence(RagModelInterface):
         loss = cls._rag_sequence_loss(
             new_ys.unsqueeze(1).unsqueeze(-1), scores.unsqueeze(1), null_idx
         )  # type: ignore
-        sorted_by_score = [
-            (hyps[idx], loss[idx]) for idx in loss.sort()[-1]
-        ]  # sort ascending
-        return sorted_by_score
+        return [(hyps[idx], loss[idx]) for idx in loss.sort()[-1]]
 
     @classmethod
     def _rag_sequence_loss(
@@ -550,10 +545,7 @@ class RagSequence(RagModelInterface):
         ll = ll.squeeze(-1)
         ll = ll.sum(2)  # sum over tokens
         ll = ll.logsumexp(1)  # sum over docs
-        nll_loss = -ll
-        loss = nll_loss
-
-        return loss
+        return -ll
 
     def set_input_turn_cnt_vec(
         self, observation: Message, model: RagModel, query_str: str
@@ -647,13 +639,13 @@ class RagSequence(RagModelInterface):
             # bypass first token in BART
             second_token_scores = out_probs[:, :, 1:2, :]
             remainder = out_probs[:, :, 2:, :]
-            output = torch.cat(
-                [first_token_scores, second_token_scores + doc_probs, remainder], dim=2
+            return torch.cat(
+                [first_token_scores, second_token_scores + doc_probs, remainder],
+                dim=2,
             )
         else:
             remainder = out_probs[:, :, 1:, :]
-            output = torch.cat([first_token_scores + doc_probs, remainder], dim=2)
-        return output
+            return torch.cat([first_token_scores + doc_probs, remainder], dim=2)
 
 
 class RagToken(RagModelInterface):
@@ -860,8 +852,7 @@ class RagToken(RagModelInterface):
             return decoder output with docs marginalized.
         """
         log_prob_sum = out_probs + doc_probs.unsqueeze(-1).unsqueeze(-1)
-        output = torch.logsumexp(log_prob_sum, dim=1)  # sum across documents
-        return output
+        return torch.logsumexp(log_prob_sum, dim=1)
 
 
 class RagTurn(RagModelInterface):
@@ -1014,7 +1005,7 @@ class RagTurn(RagModelInterface):
             offset = 0
             mapping = {}
             for i, it in enumerate(batch.input_turns_cnt):
-                mapping.update({j + offset: i for j in range(it)})
+                mapping |= {j + offset: i for j in range(it)}
                 offset += it.item()
             batch_idx = mapping[batch_idx]
 
@@ -1089,10 +1080,10 @@ class RagTurn(RagModelInterface):
                         n_best_i.append(new_beam)
                 new_n_best.append(sorted(n_best_i, key=lambda x: -x[1]))
                 offset += it
-        elif self.turn_marginalize == 'doc_only' and self.thorough:
+        elif self.turn_marginalize == 'doc_only':
             hyps = [hyp[0] for h in n_best_beam_preds_scores for hyp in h]
             sorted_by_score = RagSequence.thorough_generation(
-                hyps, batch.src_text_vec[0:1], self.null_idx, model
+                hyps, batch.src_text_vec[:1], self.null_idx, model
             )
             new_n_best.append(sorted_by_score)
         elif batch.batchsize > 1:
@@ -1269,23 +1260,21 @@ class RagTurn(RagModelInterface):
 
         log_prob_sum = out_probs + doc_probs.unsqueeze(-1).unsqueeze(-1)
         if self.turn_marginalize == 'doc_only':
-            output = torch.logsumexp(log_prob_sum, dim=1)  # sum across documents only
-        else:
-            turns = []
-            offset = 0
-            for it in input_turns_cnt:
-                turns.append(
-                    log_prob_sum[offset : offset + it].logsumexp(dim=1, keepdim=False)
-                )
-                offset += it
-            output = torch.stack(
-                [
-                    (
-                        t
-                        * self.discount_factor
-                        ** torch.arange(t.size(0)).flip(0).to(t).view(t.size(0), 1, 1)
-                    ).logsumexp(dim=0)
-                    for i, t in enumerate(turns)
-                ]
+            return torch.logsumexp(log_prob_sum, dim=1)
+        turns = []
+        offset = 0
+        for it in input_turns_cnt:
+            turns.append(
+                log_prob_sum[offset : offset + it].logsumexp(dim=1, keepdim=False)
             )
-        return output
+            offset += it
+        return torch.stack(
+            [
+                (
+                    t
+                    * self.discount_factor
+                    ** torch.arange(t.size(0)).flip(0).to(t).view(t.size(0), 1, 1)
+                ).logsumexp(dim=0)
+                for t in turns
+            ]
+        )

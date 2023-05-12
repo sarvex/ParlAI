@@ -181,10 +181,7 @@ class Batch(AttrDict):
             if key == 'valid_indices' or key.startswith('_'):
                 output[key] = value
                 continue
-            if torch.is_tensor(value):
-                output[key] = value.to(dev)
-            else:
-                output[key] = value
+            output[key] = value.to(dev) if torch.is_tensor(value) else value
         return type(self)(**output)
 
     def __repr__(self):
@@ -403,12 +400,11 @@ class History(object):
         return self.history_vecs
 
     def _add_person_tokens(self, text, token, add_after_newln=False):
-        if add_after_newln:
-            split = text.split('\n')
-            split[-1] = token + ' ' + split[-1]
-            return '\n'.join(split)
-        else:
-            return token + ' ' + text
+        if not add_after_newln:
+            return f'{token} {text}'
+        split = text.split('\n')
+        split[-1] = f'{token} {split[-1]}'
+        return '\n'.join(split)
 
     def __str__(self) -> str:
         return self.get_history_str() or ''
@@ -791,7 +787,7 @@ class TorchAgent(ABC, Agent):
 
                 if len(self.dict) % FP16_PAD_SIZE != 0:
                     for i in range(FP16_PAD_SIZE - len(self.dict) % FP16_PAD_SIZE):
-                        self.dict['__FP16_PAD_{}__'.format(i)] = 1
+                        self.dict[f'__FP16_PAD_{i}__'] = 1
 
             # global_metrics keeps track of batch-level or global-level metrics
             self.global_metrics = Metrics(shared=None)
@@ -914,10 +910,11 @@ class TorchAgent(ABC, Agent):
                 init_model = opt['init_model']
                 is_finetune = False
 
-            if init_model is not None:
-                # if we are loading a model, should load its dict too
-                if PathManager.exists(init_model + '.dict') or opt['dict_file'] is None:
-                    opt['dict_file'] = init_model + '.dict'
+            if init_model is not None and (
+                PathManager.exists(f'{init_model}.dict')
+                or opt['dict_file'] is None
+            ):
+                opt['dict_file'] = f'{init_model}.dict'
 
         return init_model, is_finetune
 
@@ -953,8 +950,7 @@ class TorchAgent(ABC, Agent):
         if self.opt.get('interactive_mode'):
             return False
         datatype = self.opt.get('datatype', '')
-        is_train = 'train' in datatype and 'evalmode' not in datatype
-        return is_train
+        return 'train' in datatype and 'evalmode' not in datatype
 
     def init_optim(
         self,
@@ -1085,14 +1081,14 @@ class TorchAgent(ABC, Agent):
             if self.fp16 and optimstate_fp16:
                 # previously trained in fp16, now we're training in fp16.
                 pass
-            elif optimstate_fp16 and not self.fp16:
+            elif optimstate_fp16:
                 # old optimizer was fp16 but now we're doing fp32,
                 # if pytorch, drop the fp16 wrapper from the state_dict and just load
                 # the fp16 weights into the fp32 tensors
                 if 'optimizer_state_dict' in optim_states:
                     # trained with apex, pull in the old state
                     optim_states = optim_states['optimizer_state_dict']
-            elif not optimstate_fp16 and self.fp16:
+            elif self.fp16:
                 # old optimizer was fp32, but now we're doing fp16.
                 # this is a bit clunky, but alternatives are worse
                 try:
@@ -1103,11 +1099,6 @@ class TorchAgent(ABC, Agent):
                         'WARNING: not loading optim state since model params changed.'
                     )
                     return True
-            else:
-                # previously trained in fp32, loading in fp32.
-                # no special treatment needed.
-                pass
-
             # finally, try to actually load the optimizer state
             try:
                 self.optimizer.load_state_dict(optim_states)
@@ -1255,9 +1246,7 @@ class TorchAgent(ABC, Agent):
             embs = download(self.opt.get('datapath'))
         else:
             raise RuntimeError(
-                'embedding type {} not implemented. check arg, '
-                'submit PR to this function, or override it.'
-                ''.format(emb_type)
+                f'embedding type {emb_type} not implemented. check arg, submit PR to this function, or override it.'
             )
         return embs, init
 
@@ -1280,24 +1269,20 @@ class TorchAgent(ABC, Agent):
             method ends in "-force".
         """
         pre_dim = vec.size(0)
-        if pre_dim != target_dim or method.endswith('force'):
-            if method.startswith('random'):
-                # random projection
-                if not hasattr(self, 'proj_rp'):
-                    self.proj_rp = torch.Tensor(pre_dim, target_dim).normal_()
-                    # rescale so we're not destroying norms too much
-                    # http://scikit-learn.org/stable/modules/random_projection.html#gaussian-random-projection
-                    self.proj_rp /= target_dim
-                return torch.mm(vec.unsqueeze(0), self.proj_rp)
-            else:
+        if pre_dim == target_dim and not method.endswith('force'):
+            return vec
+        if not method.startswith('random'):
                 # TODO: PCA
                 # TODO: PCA + RP
                 # TODO: copy
-                raise RuntimeError(
-                    'Projection method not implemented: {}' ''.format(method)
-                )
-        else:
-            return vec
+            raise RuntimeError(f'Projection method not implemented: {method}')
+        # random projection
+        if not hasattr(self, 'proj_rp'):
+            self.proj_rp = torch.Tensor(pre_dim, target_dim).normal_()
+            # rescale so we're not destroying norms too much
+            # http://scikit-learn.org/stable/modules/random_projection.html#gaussian-random-projection
+            self.proj_rp /= target_dim
+        return torch.mm(vec.unsqueeze(0), self.proj_rp)
 
     def _copy_embeddings(self, weight, emb_type, log=True):
         """
@@ -1441,10 +1426,7 @@ class TorchAgent(ABC, Agent):
             return vec
         if len(vec) <= truncate:
             return vec
-        if truncate_left:
-            return vec[-truncate:]
-        else:
-            return vec[:truncate]
+        return vec[-truncate:] if truncate_left else vec[:truncate]
 
     def _set_text_vec(self, obs, history, truncate):
         """
@@ -1501,16 +1483,16 @@ class TorchAgent(ABC, Agent):
         if label_type is None:
             return
 
-        elif label_type + '_vec' in obs:
+        elif f'{label_type}_vec' in obs:
             # check truncation of pre-computed vector
-            vec_label_length = len(obs[label_type + '_vec'])
-            truncated_vec = self._check_truncate(obs[label_type + '_vec'], truncate)
+            vec_label_length = len(obs[f'{label_type}_vec'])
+            truncated_vec = self._check_truncate(obs[f'{label_type}_vec'], truncate)
             obs.force_set('label_original_length', vec_label_length)
             obs.force_set('label_truncate_rate', vec_label_length > len(truncated_vec))
             obs.force_set(
                 'label_truncated_length', max(vec_label_length - len(truncated_vec), 0)
             )
-            obs.force_set(label_type + '_vec', torch.LongTensor(truncated_vec))
+            obs.force_set(f'{label_type}_vec', torch.LongTensor(truncated_vec))
         else:
             # pick one label if there are multiple
             lbls = obs[label_type]
@@ -1527,8 +1509,8 @@ class TorchAgent(ABC, Agent):
             obs.force_set(
                 'label_truncated_length', max(vec_label_length - len(vec_label), 0)
             )
-            obs[label_type + '_vec'] = vec_label
-            obs[label_type + '_choice'] = label
+            obs[f'{label_type}_vec'] = vec_label
+            obs[f'{label_type}_choice'] = label
 
         return obs
 
@@ -1664,7 +1646,7 @@ class TorchAgent(ABC, Agent):
 
         valid_obs = [(i, ex) for i, ex in enumerate(obs_batch) if self.is_valid(ex)]
 
-        if len(valid_obs) == 0:
+        if not valid_obs:
             return Batch(batchsize=0)
 
         valid_inds, exs = zip(*valid_obs)
@@ -1712,8 +1694,8 @@ class TorchAgent(ABC, Agent):
                 )
             field = 'labels' if labels_avail else 'eval_labels'
 
-            label_vecs = [ex.get(field + '_vec', self.EMPTY) for ex in exs]
-            labels = [ex.get(field + '_choice') for ex in exs]
+            label_vecs = [ex.get(f'{field}_vec', self.EMPTY) for ex in exs]
+            labels = [ex.get(f'{field}_choice') for ex in exs]
             y_lens = [y.shape[0] for y in label_vecs]
 
             ys, y_lens = self._pad_tensor(label_vecs)
@@ -1961,14 +1943,13 @@ class TorchAgent(ABC, Agent):
                 "you're missing a step in your observe/act/self_observe loop."
             )
 
-        if self.observation['episode_done']:
-            if not self.__expecting_clear_history:
-                raise RuntimeError(
-                    "You probably overrode observe() without implementing calling "
-                    "super().observe(). This is unexpected. *If you must* avoid the "
-                    "super call, then you should file a GitHub issue referencing "
-                    "#2043."
-                )
+        if self.observation['episode_done'] and not self.__expecting_clear_history:
+            raise RuntimeError(
+                "You probably overrode observe() without implementing calling "
+                "super().observe(). This is unexpected. *If you must* avoid the "
+                "super call, then you should file a GitHub issue referencing "
+                "#2043."
+            )
 
     def state_dict(self):
         """
@@ -2022,18 +2003,17 @@ class TorchAgent(ABC, Agent):
         path = self.opt.get('model_file', None) if path is None else path
 
         if path:
-            model_dict_path = path + '.dict'
+            model_dict_path = f'{path}.dict'
             if hasattr(self, 'dict') and not PathManager.exists(
                 model_dict_path
             ):  # force save dictionary
                 # TODO: Look into possibly overriding opt('dict_file') with new path
                 logging.debug(f'Saving dictionary to {model_dict_path}')
                 self.dict.save(model_dict_path, sort=False)
-            states = self.state_dict()
-            if states:  # anything found to save?
+            if states := self.state_dict():
                 atomic_save(states, path)
                 # save opt file
-                self.opt.save(path + '.opt')
+                self.opt.save(f'{path}.opt')
 
     def load_state_dict(self, state_dict):
         """
@@ -2085,10 +2065,8 @@ class TorchAgent(ABC, Agent):
         # call the parent upgrades
         opt_from_disk = super(TorchAgent, cls).upgrade_opt(opt_from_disk)
 
-        if 'fp16_impl' in opt_from_disk:
-            # 2021-02-23: we removed apex and replaced it with our own thing
-            if opt_from_disk['fp16_impl'] == 'apex':
-                opt_from_disk['fp16_impl'] = 'safe'
+        if 'fp16_impl' in opt_from_disk and opt_from_disk['fp16_impl'] == 'apex':
+            opt_from_disk['fp16_impl'] = 'safe'
 
         if 'hf_skip_special_tokens' in opt_from_disk:
             # 2020-10-28: we killed the --hf-skip-special-tokens option
@@ -2332,12 +2310,8 @@ class TorchAgent(ABC, Agent):
         It is recommended (but not forced) that you call this in train_step.
         """
         update_freq = self.opt.get('update_freq', 1)
-        if update_freq > 1:
-            # we're doing gradient accumulation, so we don't only want to step
-            # every N updates instead
-            # self._number_grad_accum is updated in backward function
-            if self._number_grad_accum != 0:
-                return
+        if update_freq > 1 and self._number_grad_accum != 0:
+            return
 
         if self.fp16:
             # we've been accumulating grads in fp16 and delaying the fp32 copy update.

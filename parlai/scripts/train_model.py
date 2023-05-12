@@ -63,10 +63,9 @@ def _num_else_inf(opt: Opt, key: str, distributed_warn=False):
                 f'Using {nicekey} in distributed mode can lead to slowdowns. '
                 'See https://github.com/facebookresearch/ParlAI/pull/3379 for more info.'
             )
-        value = opt[key]
+        return opt[key]
     else:
-        value = float('inf')
-    return value
+        return float('inf')
 
 
 def setup_args(parser=None) -> ParlaiParser:
@@ -332,7 +331,7 @@ class TrainLoop:
             opt['init_model'] = opt['model_file'] + '.checkpoint'
             trainstats_suffix = '.checkpoint.trainstats'
         # Possibly build a dictionary (not all models do this).
-        if not (opt.get('dict_file') or opt.get('model_file')):
+        if not opt.get('dict_file') and not opt.get('model_file'):
             raise RuntimeError(
                 'WARNING: For train_model, please specify either a '
                 'model_file or dict_file.'
@@ -420,17 +419,15 @@ class TrainLoop:
                 self.train_reports = obj.get('train_reports', [])
                 if 'best_valid' in obj:
                     self.best_valid = obj['best_valid']
-                else:
-                    # old method
-                    if opt.get('model_file') and PathManager.exists(
+                elif opt.get('model_file') and PathManager.exists(
                         opt['model_file'] + '.best_valid'
                     ):
-                        with PathManager.open(
-                            opt['model_file'] + ".best_valid", 'r'
-                        ) as f:
-                            x = f.readline()
-                            self.best_valid = float(x)
-                            f.close()
+                    with PathManager.open(
+                        opt['model_file'] + ".best_valid", 'r'
+                    ) as f:
+                        x = f.readline()
+                        self.best_valid = float(x)
+                        f.close()
 
         if opt['tensorboard_log'] and is_primary_worker():
             self.tb_logger = TensorboardLogger(opt)
@@ -562,9 +559,7 @@ class TrainLoop:
         else:
             self.impatience += 1
             logging.report(
-                'did not beat best {}: {} impatience: {}'.format(
-                    opt['validation_metric'], round(self.best_valid, 4), self.impatience
-                )
+                f"did not beat best {opt['validation_metric']}: {round(self.best_valid, 4)} impatience: {self.impatience}"
             )
         self.validate_time.reset()
 
@@ -747,7 +742,6 @@ class TrainLoop:
         opt = self.opt
         if opt['display_examples']:
             print(self.world.display() + '\n~~')
-        logs = []
         # get report
         train_report = self.world.report()
         train_report = self._sync_metrics(train_report)
@@ -761,11 +755,11 @@ class TrainLoop:
         train_report_trainstats['train_time'] = self.train_time.time()
         self.train_reports.append(train_report_trainstats)
 
-        # time elapsed
-        logs.append(f'time:{self.train_time.time():.0f}s')
-        logs.append(f'total_exs:{self._total_exs}')
-        logs.append(f'total_steps:{self._train_steps}')
-
+        logs = [
+            f'time:{self.train_time.time():.0f}s',
+            f'total_exs:{self._total_exs}',
+            f'total_steps:{self._train_steps}',
+        ]
         if self._total_epochs >= 0:
             # only if it's unbounded
             logs.append(f'epochs:{self._total_epochs:.2f}')
@@ -776,7 +770,7 @@ class TrainLoop:
         if time_left is not None:
             logs.append(f'time_left:{max(0,time_left):.0f}s')
 
-        log = '{}\n{}\n'.format(' '.join(logs), nice_report(train_report))
+        log = f"{' '.join(logs)}\n{nice_report(train_report)}\n"
         logging.info(log)
         self.log_time.reset()
         self._last_log_steps = 0

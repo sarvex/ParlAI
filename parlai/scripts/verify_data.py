@@ -69,14 +69,14 @@ def verify(opt):
         log_every_n_secs = float('inf')
     log_time = TimeLogger()
 
-    counts = {}
-    counts['missing_text'] = 0
-    counts['missing_labels'] = 0
-    counts['missing_label_candidates'] = 0
-    counts['empty_string_label_candidates'] = 0
-    counts['label_candidates_with_missing_label'] = 0
-    counts['did_not_return_message'] = 0
-
+    counts = {
+        'missing_text': 0,
+        'missing_labels': 0,
+        'missing_label_candidates': 0,
+        'empty_string_label_candidates': 0,
+        'label_candidates_with_missing_label': 0,
+        'did_not_return_message': 0,
+    }
     # Show some example dialogs.
     while not world.epoch_done():
         world.parley()
@@ -93,31 +93,28 @@ def verify(opt):
         if 'labels' not in act and 'eval_labels' not in act:
             warn("warning: missing labels/eval_labels field:\n", act, opt)
             counts['missing_labels'] += 1
-        else:
-            if 'label_candidates' not in act:
-                counts['missing_label_candidates'] += 1
-            else:
-                labels = act.get('labels', act.get('eval_labels'))
-                is_label_cand = {}
-                for l in labels:
-                    is_label_cand[l] = False
-                for c in act['label_candidates']:
-                    if c == '':
-                        warn("warning: empty string label_candidate:\n", act, opt)
-                        counts['empty_string_label_candidates'] += 1
-                    if c in is_label_cand:
-                        if is_label_cand[c] is True:
-                            warn(
-                                "warning: label mentioned twice in candidate_labels:\n",
-                                act,
-                                opt,
-                            )
-                        is_label_cand[c] = True
-                for _, has in is_label_cand.items():
-                    if has is False:
-                        warn("warning: label missing in candidate_labels:\n", act, opt)
-                        counts['label_candidates_with_missing_label'] += 1
+        elif 'label_candidates' in act:
+            labels = act.get('labels', act.get('eval_labels'))
+            is_label_cand = {l: False for l in labels}
+            for c in act['label_candidates']:
+                if c == '':
+                    warn("warning: empty string label_candidate:\n", act, opt)
+                    counts['empty_string_label_candidates'] += 1
+                if c in is_label_cand:
+                    if is_label_cand[c] is True:
+                        warn(
+                            "warning: label mentioned twice in candidate_labels:\n",
+                            act,
+                            opt,
+                        )
+                    is_label_cand[c] = True
+            for has in is_label_cand.values():
+                if has is False:
+                    warn("warning: label missing in candidate_labels:\n", act, opt)
+                    counts['label_candidates_with_missing_label'] += 1
 
+        else:
+            counts['missing_label_candidates'] += 1
         if log_time.time() > log_every_n_secs:
             text, log = report(world, counts, log_time)
             print(text)

@@ -88,11 +88,7 @@ class HredModel(TorchGeneratorModel):
         hidden = _transpose_hidden_state(hidden)
 
         # LSTM or GRU/RNN hidden state?
-        if isinstance(hidden, torch.Tensor):
-            hid, cell = hidden, None
-        else:
-            hid, cell = hidden
-
+        hid, cell = (hidden, None) if isinstance(hidden, torch.Tensor) else hidden
         if not torch.is_tensor(indices):
             # cast indices to a tensor if needed
             indices = torch.LongTensor(indices).to(hid.device)

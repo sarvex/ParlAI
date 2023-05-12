@@ -26,7 +26,7 @@ def _build(task_list):
         for j in t['tags']:
             tag = _preprocess(j)
             if tag in tasks:
-                raise RuntimeError('tag ' + tag + ' is the same as a task name')
+                raise RuntimeError(f'tag {tag} is the same as a task name')
             tags[tag].append(t)
     return tasks, tags
 

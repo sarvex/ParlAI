@@ -40,7 +40,7 @@ def get_world_module(world_path):
     try:
         run_module = importlib.import_module(world_path)
     except Exception as e:
-        print("Could not import world file {}".format(world_path))
+        print(f"Could not import world file {world_path}")
         raise e
     return run_module
 
@@ -67,7 +67,7 @@ def get_world_fn_attr(world_module, world_name, fn_name, raise_if_missing=True):
         result_fn = getattr(DesiredWorld, fn_name)
     except Exception as e:
         if raise_if_missing:
-            print("Could not find {} for {}".format(fn_name, world_name))
+            print(f"Could not find {fn_name} for {world_name}")
             raise e
     return result_fn
 
@@ -186,8 +186,7 @@ class PersonalInfoDetector(object):
         self.ssn_regex = r"^\d{3}-\d{2}-\d{4}$"
 
     def detect_all(self, text):
-        contains = {}
-        contains["credit_card"] = self.detect_credit_card(text)
+        contains = {"credit_card": self.detect_credit_card(text)}
         contains["email"] = self.detect_email(text)
         contains["phone_number"] = self.detect_phone_number(text)
         contains["ssn"] = self.detect_ssn(text)
@@ -201,9 +200,7 @@ class PersonalInfoDetector(object):
             if v != []:
                 contains_personal_info = True
                 txt += f"\n- {k.replace('_', ' ')}: {', '.join([str(x) for x in v])}"
-        if not contains_personal_info:
-            return ""
-        return txt
+        return "" if not contains_personal_info else txt
 
     def detect_credit_card(self, text):
         return re.findall(self.credit_card_regex, text)
@@ -214,10 +211,7 @@ class PersonalInfoDetector(object):
 
     def detect_phone_number(self, text):
         phones = re.findall(self.phone_number_regex, text)
-        edited = []
-        for tup in phones:
-            edited.append("".join(list(tup)))
-        return edited
+        return ["".join(list(tup)) for tup in phones]
 
     def detect_ssn(self, text):
         return re.findall(self.ssn_regex, text)

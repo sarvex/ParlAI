@@ -50,9 +50,7 @@ class AcuteEvalBuilder(TaskBuilder):
         """
         Build the frontend if it doesn't exist, then copy into the server directory.
         """
-        # Only build this task if it hasn't already been built
-        if True:  # not os.path.exists(FRONTEND_BUILD_DIR):
-            self.rebuild_core()
+        self.rebuild_core()
 
         # Copy the built core and the given task file to the target path
         bundle_js_file = os.path.join(self.FRONTEND_BUILD_DIR, "bundle.js")

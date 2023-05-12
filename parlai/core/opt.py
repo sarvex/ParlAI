@@ -98,10 +98,7 @@ class Opt(dict):
                 continue
             i += 1
             changes.append(f'{i}. {key} was set to {val} at:\n{loc}')
-        if changes:
-            return '\n'.join(changes)
-        else:
-            return f'No history for {key}'
+        return '\n'.join(changes) if changes else f'No history for {key}'
 
     def save(self, filename: str) -> None:
         """
@@ -154,8 +151,8 @@ class Opt(dict):
                 new_opt.update(cls.load_init(subopt))
             return new_opt
 
-        oa_filename = os.path.join("opt_presets", optfile + ".opt")
-        user_filename = os.path.join(os.path.expanduser(f"~/.parlai"), oa_filename)
+        oa_filename = os.path.join("opt_presets", f"{optfile}.opt")
+        user_filename = os.path.join(os.path.expanduser("~/.parlai"), oa_filename)
         if PathManager.exists(optfile):
             return cls.load(optfile)
         elif PathManager.exists(user_filename):
@@ -182,7 +179,7 @@ class Opt(dict):
     def log(self, header="Opt"):
         from parlai.core.params import print_git_commit
 
-        logging.info(header + ":")
+        logging.info(f"{header}:")
         for key in sorted(self.keys()):
             valstr = str(self[key])
             if valstr.replace(" ", "").replace("\n", "") != valstr:

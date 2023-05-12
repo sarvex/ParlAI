@@ -34,7 +34,7 @@ def _make_argparse_table(class_):
             if hasattr(action, 'hidden') and action.hidden:
                 # some options are marked hidden
                 continue
-            if action.dest == argparse.SUPPRESS or action.dest == 'help':
+            if action.dest in [argparse.SUPPRESS, 'help']:
                 continue
             action_strings = ",  ".join(f'`{a}`' for a in action.option_strings)
             description = []
@@ -69,9 +69,13 @@ def _make_argparse_table(class_):
         if not actions:
             continue
 
-        readme.append(f'__{ag.title}__\n\n')
-        readme.append("| Argument | Description |\n")
-        readme.append("|----------|----------|\n")
+        readme.extend(
+            (
+                f'__{ag.title}__\n\n',
+                "| Argument | Description |\n",
+                "|----------|----------|\n",
+            )
+        )
         for row in actions:
             text = "| " + " | ".join(row) + " |"
             text = text.replace("\n", "<br>")
@@ -104,7 +108,7 @@ def prepare_agent_readme(agent):
     submodules = pkgutil.iter_modules([root])
     for sm in submodules:
         # look in the main folder
-        if not (sm.name == agent or sm.name == 'agents'):
+        if sm.name not in [agent, 'agents']:
             continue
         module_name = f'parlai.agents.{agent}.{sm.name}'
         module = importlib.import_module(module_name)
@@ -120,9 +124,7 @@ def prepare_agent_readme(agent):
                 and hasattr(item, 'add_cmdline_args')
                 and not inspect.isabstract(item)
             ):
-                # gather all the options
-                options = _make_argparse_table(item)
-                if options:
+                if options := _make_argparse_table(item):
                     # if there were no options, don't mention it
                     readme.append(f"## {itemname} Options\n\n")
                     readme += options

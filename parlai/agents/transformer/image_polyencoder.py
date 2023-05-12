@@ -105,10 +105,7 @@ class ImagePolyencoderAgent(PolyencoderAgent, TorchImageAgent):
         Use the size of the text vec if it exists; otherwise, use the length of the
         image feature list.
         """
-        if batch.text_vec is not None:
-            return batch.text_vec.size(0)
-        else:
-            return len(batch.image)
+        return len(batch.image) if batch.text_vec is None else batch.text_vec.size(0)
 
     def _model_context_input(self, batch) -> Dict[str, Any]:
         """
@@ -158,23 +155,7 @@ class ImagePolyencoderModule(PolyEncoderModule):
             either a TransformerEncoder or a ContextWithImageEncoder, initialized
             correctly
         """
-        if for_context:
-            if reduction_type is not None:
-                raise NotImplementedError('No encoder output reductions supported!')
-            embeddings = self._get_embeddings(
-                dict_=dict_, null_idx=null_idx, embedding_size=opt['embedding_size']
-            )
-            return ContextWithImageEncoder(
-                opt=opt,
-                vocabulary_size=len(dict_),
-                embedding=embeddings,
-                padding_idx=null_idx,
-                image_encoder_num_layers=opt['image_encoder_num_layers'],
-                image_features_dim=opt['image_features_dim'],
-                image_combination_mode=opt['image_combination_mode'],
-                n_image_tokens=opt['n_image_tokens'],
-            )
-        else:
+        if not for_context:
             # The candidate encoder is the same as for PolyEncoderModule
             return super().get_encoder(
                 opt=opt,
@@ -183,6 +164,21 @@ class ImagePolyencoderModule(PolyEncoderModule):
                 reduction_type=reduction_type,
                 for_context=for_context,
             )
+        if reduction_type is not None:
+            raise NotImplementedError('No encoder output reductions supported!')
+        embeddings = self._get_embeddings(
+            dict_=dict_, null_idx=null_idx, embedding_size=opt['embedding_size']
+        )
+        return ContextWithImageEncoder(
+            opt=opt,
+            vocabulary_size=len(dict_),
+            embedding=embeddings,
+            padding_idx=null_idx,
+            image_encoder_num_layers=opt['image_encoder_num_layers'],
+            image_features_dim=opt['image_features_dim'],
+            image_combination_mode=opt['image_combination_mode'],
+            n_image_tokens=opt['n_image_tokens'],
+        )
 
     def _context_encoder_input(self, ctxt_inputs: Dict[str, Any]) -> Dict[str, Any]:
         """

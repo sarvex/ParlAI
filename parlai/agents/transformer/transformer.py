@@ -235,9 +235,7 @@ class TransformerRankerAgent(TorchRankerAgent):
         elif cands.dim() == 3:
             return torch.bmm(output.unsqueeze(1), cands.transpose(1, 2)).squeeze(1)
         else:
-            raise RuntimeError(
-                'Unexpected candidate dimensions {}' ''.format(cands.dim())
-            )
+            raise RuntimeError(f'Unexpected candidate dimensions {cands.dim()}')
 
     def build_model(self, states=None):
         """
@@ -309,9 +307,7 @@ class TransformerRankerAgent(TorchRankerAgent):
 
         if cand_encs is not None:
             cands_h = cand_encs
-        scores = self._score(context_h, cands_h)
-
-        return scores
+        return self._score(context_h, cands_h)
 
 
 class TransformerGeneratorAgent(TorchGeneratorAgent):
@@ -409,8 +405,7 @@ class TransformerClassifierAgent(TorchClassifierAgent):
         """
         kwargs['add_start'] = True
         kwargs['add_end'] = True
-        obs = super().vectorize(*args, **kwargs)
-        return obs
+        return super().vectorize(*args, **kwargs)
 
     def _set_text_vec(self, *args, **kwargs):
         """

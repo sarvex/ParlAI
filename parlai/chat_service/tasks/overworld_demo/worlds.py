@@ -139,8 +139,7 @@ class MessengerOnboardDataTaskWorld(World):
         self.agent.observe(
             {
                 'id': 'World',
-                'text': 'During onboarding, you said your name was {} and your '
-                'favorite color was {}'.format(name, color),
+                'text': f'During onboarding, you said your name was {name} and your favorite color was {color}',
             }
         )
         self.episodeDone = True

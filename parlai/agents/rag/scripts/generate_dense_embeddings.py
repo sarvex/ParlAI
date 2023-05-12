@@ -83,18 +83,16 @@ class Generator(ParlaiScript):
         self.use_cuda = not self.opt.get('no_cuda') and torch.cuda.is_available()
         overrides = {'interactive_mode': True, 'interactive_candidates': 'inline'}
         if self.opt['dpr_model']:
-            overrides.update(
-                {
+            overrides |= {
+                'model': 'dpr_agent',
+                'model_file': self.opt['model_file'],
+                'share_encoders': False,
+                'override': {
                     'model': 'dpr_agent',
-                    'model_file': self.opt['model_file'],
+                    'interactive_candidates': 'inline',
                     'share_encoders': False,
-                    'override': {
-                        'model': 'dpr_agent',
-                        'interactive_candidates': 'inline',
-                        'share_encoders': False,
-                    },
-                }
-            )
+                },
+            }
             agent = create_agent(Opt(overrides))
         else:
             agent = create_agent_from_model_file(self.opt['model_file'], overrides)
@@ -146,9 +144,7 @@ class Generator(ParlaiScript):
                 if isinstance(agent, TransformerRankerAgent):
                     _, encoding = agent.model(None, None, batch.text_vec)
                 else:
-                    assert isinstance(agent, DropoutPolyAgent) or isinstance(
-                        agent, PolyencoderAgent
-                    )
+                    assert isinstance(agent, (DropoutPolyAgent, PolyencoderAgent))
                     _, _, encoding = agent.model(
                         cand_tokens=batch.text_vec.unsqueeze(1)
                     )

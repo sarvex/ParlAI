@@ -100,13 +100,12 @@ class RagModel(TorchGeneratorModel):
         encoder_class: Optional[Type] = None,
         **kwargs,
     ):
-        if encoder_class is None:
-            assert dictionary is not None
-            return RagEncoder(
-                opt=opt, dictionary=dictionary, embedding=embedding, **kwargs
-            )
-        else:
+        if encoder_class is not None:
             return encoder_class(opt, *args, **kwargs)
+        assert dictionary is not None
+        return RagEncoder(
+            opt=opt, dictionary=dictionary, embedding=embedding, **kwargs
+        )
 
     @classmethod
     def build_decoder(
@@ -172,7 +171,7 @@ class RagModel(TorchGeneratorModel):
             top_doc_scores: scores for each retrieved document.
         """
         # Retrieve, get expanded input
-        if all([tensor is not None for tensor in [input_lengths, query_vec]]):
+        if all(tensor is not None for tensor in [input_lengths, query_vec]):
             expanded_input, top_docs, top_doc_scores = self.retrieve_and_concat(
                 input, input_lengths, query_vec, input_turns_cnt
             )
@@ -215,7 +214,7 @@ class RagModel(TorchGeneratorModel):
         )  # type: ignore
         dec_out = self.decoder_output(dec_out)
 
-        if all([obj is not None for obj in [docs, doc_scores]]):
+        if all(obj is not None for obj in [docs, doc_scores]):
             # 2. Get logprobs
             n_docs = doc_scores.size(1)
             out_probs = F.log_softmax(
@@ -566,5 +565,4 @@ class T5RagModel(RagModel):
     @set_device
     def decoder_output(self, latent: torch.Tensor):
         tensor = latent * (self.t5.model_dim ** -0.5)
-        logits = self.t5.lm_head(tensor)
-        return logits
+        return self.t5.lm_head(tensor)

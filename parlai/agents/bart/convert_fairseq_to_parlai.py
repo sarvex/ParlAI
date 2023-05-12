@@ -150,13 +150,10 @@ class ConversionScript(ParlaiScript):
         state = self.state
         fairseq_args = state['args'].__dict__
 
-        transformer_common_config = {}
-
-        # 1. Map transformer params
-        for each in TRANSFORMER_PARAMETER_MAPPING:
-            transformer_common_config[
-                TRANSFORMER_PARAMETER_MAPPING[each]
-            ] = fairseq_args[f'encoder_{each}']
+        transformer_common_config = {
+            TRANSFORMER_PARAMETER_MAPPING[each]: fairseq_args[f'encoder_{each}']
+            for each in TRANSFORMER_PARAMETER_MAPPING
+        }
         # 2. Map dropout
         for each in TRANSFORMER_DROPOUT:
             transformer_common_config[each] = fairseq_args[each]
@@ -169,19 +166,17 @@ class ConversionScript(ParlaiScript):
             transformer_common_config['relu_dropout'] = fairseq_args['relu_dropout']
 
         # 3. Map other options
-        transformer_common_config.update(
-            {
-                'model': self.opt['model'],
-                # number of layers
-                'n_encoder_layers': fairseq_args['encoder_layers'],
-                'n_decoder_layers': fairseq_args['decoder_layers'],
-                # tokenization args
-                'dict_tokenizer': self.opt['tokenizer'],
-                'bpe_vocab': self.opt['vocab'],
-                'bpe_merge': self.opt['merge'],
-                'n_positions': fairseq_args['max_source_positions'],
-            }
-        )
+        transformer_common_config |= {
+            'model': self.opt['model'],
+            # number of layers
+            'n_encoder_layers': fairseq_args['encoder_layers'],
+            'n_decoder_layers': fairseq_args['decoder_layers'],
+            # tokenization args
+            'dict_tokenizer': self.opt['tokenizer'],
+            'bpe_vocab': self.opt['vocab'],
+            'bpe_merge': self.opt['merge'],
+            'n_positions': fairseq_args['max_source_positions'],
+        }
 
         # 4. Embedding scale
         if 'encoder_embed_scale' in fairseq_args:
@@ -325,7 +320,7 @@ class ConversionScript(ParlaiScript):
         return_dict = OrderedDict()
         for each_key in state_dict.keys():
             mapped_key = each_key
-            if mapped_key == 'encoder.version' or mapped_key == 'decoder.version':
+            if mapped_key in ['encoder.version', 'decoder.version']:
                 continue
 
             # 1. replace if embedding
@@ -344,7 +339,7 @@ class ConversionScript(ParlaiScript):
             #    fairseq sometimes chunks all three layers into one model weight
             if 'in_proj_weight' in mapped_key or 'in_proj_bias' in mapped_key:
                 for weightorbias in {'weight', 'bias'}:
-                    attention_project_name = 'in_proj_{}'.format(weightorbias)
+                    attention_project_name = f'in_proj_{weightorbias}'
                     if attention_project_name in mapped_key:
                         weight = state_dict[each_key]
                         size = int(weight.size(0) / 3)
@@ -352,17 +347,17 @@ class ConversionScript(ParlaiScript):
                         # For Q, K, V in order
                         return_dict[
                             mapped_key.replace(
-                                attention_project_name, 'q_lin.{}'.format(weightorbias)
+                                attention_project_name, f'q_lin.{weightorbias}'
                             )
                         ] = weights[0]
                         return_dict[
                             mapped_key.replace(
-                                attention_project_name, 'k_lin.{}'.format(weightorbias)
+                                attention_project_name, f'k_lin.{weightorbias}'
                             )
                         ] = weights[1]
                         return_dict[
                             mapped_key.replace(
-                                attention_project_name, 'v_lin.{}'.format(weightorbias)
+                                attention_project_name, f'v_lin.{weightorbias}'
                             )
                         ] = weights[2]
                 continue

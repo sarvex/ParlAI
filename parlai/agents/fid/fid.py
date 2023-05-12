@@ -52,8 +52,7 @@ class Fid(RagToken):
         incr_state_inds: torch.LongTensor,
     ) -> torch.LongTensor:
         prev_input = torch.index_select(prev_input, 0, incr_state_inds)  # type: ignore
-        decoder_input = torch.cat([prev_input, selection], dim=-1)
-        return decoder_input  # type: ignore
+        return torch.cat([prev_input, selection], dim=-1)
 
 
 class FidModel(RagModel):

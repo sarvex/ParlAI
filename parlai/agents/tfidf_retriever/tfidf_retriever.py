@@ -154,7 +154,7 @@ class TfidfRetrieverAgent(Agent):
             conn.close()
 
         self.db = DocDB(db_path=opt['retriever_dbpath'])
-        if os.path.exists(self.tfidf_path + '.npz'):
+        if os.path.exists(f'{self.tfidf_path}.npz'):
             if shared is None:
                 self.ranker = TfidfDocRanker(
                     tfidf_path=opt['retriever_tfidfpath'], strict=False
@@ -189,9 +189,7 @@ class TfidfRetrieverAgent(Agent):
         elif self.ret_mode == 'values':
             return self.db.get_doc_value(docid)
         else:
-            raise RuntimeError(
-                'Retrieve mode {} not yet supported.'.format(self.ret_mode)
-            )
+            raise RuntimeError(f'Retrieve mode {self.ret_mode} not yet supported.')
 
     def rebuild(self):
         if len(self.triples_to_add) > 0:
@@ -248,8 +246,7 @@ class TfidfRetrieverAgent(Agent):
 
     def act(self):
         obs = self.observation
-        reply = {}
-        reply['id'] = self.getID()
+        reply = {'id': self.getID()}
         if 'labels' in obs:
             return self.train_act()
         if 'text' in obs:

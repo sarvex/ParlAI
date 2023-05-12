@@ -67,10 +67,7 @@ class ModelChatOnboardWorld(CrowdOnboardWorld):
         ans1_sort = sorted(ans1)
         ans2_sort = sorted(ans2)
 
-        for x in range(len(ans1_sort)):
-            if ans1_sort[x] != ans2_sort[x]:
-                return False
-        return True
+        return all(ans1_sort[x] == ans2_sort[x] for x in range(len(ans1_sort)))
 
     def check_onboarding_answers(self, worker_answers) -> bool:
         """
@@ -96,12 +93,10 @@ class ModelChatOnboardWorld(CrowdOnboardWorld):
         print(
             f'Worker {self.worker_id} got {number_correct} annotations correct and {number_incorrect} incorrect in onboarding.'
         )
-        if (
+        return (
             number_correct >= self.min_correct
             and number_incorrect <= self.max_incorrect
-        ):
-            return True
-        return False
+        )
 
     def parley(self):
 
@@ -626,14 +621,13 @@ def get_bot_worker(opt: Dict[str, Any], model_name: str) -> TurkLikeAgent:
     shared_bot_agents = opt['shared_bot_agents']
     num_turns = opt['num_turns']
     bot_agent = create_agent_from_shared(shared_bot_agents[model_name])
-    bot_worker = TurkLikeAgent(
+    return TurkLikeAgent(
         opt,
         model_name=model_name,
         model_agent=bot_agent,
         num_turns=num_turns,
         semaphore=semaphore,
     )
-    return bot_worker
 
 
 def make_world(opt, agents):

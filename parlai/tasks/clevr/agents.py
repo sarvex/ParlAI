@@ -18,12 +18,12 @@ def _path(opt):
 
     if dt == 'valid':
         dt = 'val'
-    elif dt != 'train' and dt != 'test':
+    elif dt not in ['train', 'test']:
         raise RuntimeError('Not valid datatype.')
 
     prefix = os.path.join(opt['datapath'], 'CLEVR', 'CLEVR_v1.0')
     questions_path = os.path.join(
-        prefix, 'questions', 'CLEVR_' + dt + '_questions.json'
+        prefix, 'questions', f'CLEVR_{dt}_questions.json'
     )
     images_path = os.path.join(prefix, 'images', dt)
 
@@ -53,7 +53,7 @@ class DefaultTeacher(DialogTeacher):
         return self.cands
 
     def setup_data(self, path):
-        print('loading: ' + path)
+        print(f'loading: {path}')
         with PathManager.open(path) as data_file:
             clevr = json.load(data_file)
 

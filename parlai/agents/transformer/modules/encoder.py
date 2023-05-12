@@ -92,13 +92,13 @@ class TransformerEncoderLayer(nn.Module):
             tensor = self.norm1(tensor)
         attended_tensor = self.attention(tensor, mask=mask)[0]
         tensor = residual + self.dropout(attended_tensor)
-        if self.variant == 'aiayn' or self.variant == 'xlm' or self.variant == 'bart':
+        if self.variant in ['aiayn', 'xlm', 'bart']:
             tensor = self.norm1(tensor)
         residual = tensor
         if self.variant == 'prelayernorm':
             tensor = self.norm2(tensor)
         tensor = residual + self.dropout(self.ffn(tensor))
-        if self.variant == 'aiayn' or self.variant == 'xlm' or self.variant == 'bart':
+        if self.variant in ['aiayn', 'xlm', 'bart']:
             tensor = self.norm2(tensor)
         tensor *= mask.unsqueeze(-1).type_as(tensor)
         return tensor
@@ -186,12 +186,6 @@ class TransformerEncoder(nn.Module):
             raise AssertionError(
                 "This code should not execute. Left here in case we want to enable it."
             )
-            assert self.padding_idx is not None
-            self.embeddings = nn.Embedding(
-                vocabulary_size, self.embedding_size, padding_idx=padding_idx
-            )
-            nn.init.normal_(self.embeddings.weight, 0, self.embedding_size ** -0.5)
-
         # create the positional embeddings
         self.position_embeddings = nn.Embedding(self.n_positions, self.embedding_size)
         if not opt.get('learn_positional_embeddings', False):
@@ -206,11 +200,7 @@ class TransformerEncoder(nn.Module):
             )
 
         # embedding normalization
-        if (
-            self.variant == 'xlm'
-            or self.variant == 'prelayernorm'
-            or self.variant == 'bart'
-        ):
+        if self.variant in ['xlm', 'prelayernorm', 'bart']:
             self.norm_embeddings = torch.nn.LayerNorm(self.dim, eps=LAYER_NORM_EPS)
         elif self.variant == 'aiayn':
             pass
@@ -332,9 +322,7 @@ class TransformerEncoder(nn.Module):
         elif self.reduction_type is None or 'none' in self.reduction_type:
             return tensor, mask
         else:
-            raise ValueError(
-                "Can't handle --reduction-type {}".format(self.reduction_type)
-            )
+            raise ValueError(f"Can't handle --reduction-type {self.reduction_type}")
 
     def forward(  # type: ignore
         self,
@@ -356,7 +344,7 @@ class TransformerEncoder(nn.Module):
         # embed input
         tensor, mask = self.forward_embedding(input, positions, segments)
 
-        if self.variant == 'xlm' or self.variant == 'bart':
+        if self.variant in ['xlm', 'bart']:
             tensor = self.norm_embeddings(tensor)
 
         # --dropout on the embeddings
@@ -372,10 +360,7 @@ class TransformerEncoder(nn.Module):
 
         # reduce output
         tensor, out_mask = self.reduce_output(tensor, mask)
-        if out_mask is not None:
-            return tensor, out_mask
-        else:
-            return tensor
+        return (tensor, out_mask) if out_mask is not None else tensor
 
     def _apply_model_parallel(self, tensor, mask):
         """

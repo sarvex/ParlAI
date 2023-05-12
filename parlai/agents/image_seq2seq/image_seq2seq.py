@@ -114,10 +114,9 @@ class ImageSeq2seqAgent(TransformerGeneratorAgent, TorchImageAgent):
                 if isinstance(img, torch.Tensor):
                     img = self._process_image_features(img)
                 images.append(img)
-            batch.image = images
         else:
             images = [None] * len(batch.valid_indices)
-            batch.image = images
+        batch.image = images
         return batch
 
     def _process_image_features(self, features: torch.Tensor) -> torch.Tensor:
@@ -167,7 +166,7 @@ class ImageSeq2seqAgent(TransformerGeneratorAgent, TorchImageAgent):
             ] = self.model.encoder.segment_embeddings.weight
 
         # Case 3 -> Only an Encoder provided
-        if not (any('decoder' in state_key for state_key in state_dict)):
+        if all('decoder' not in state_key for state_key in state_dict):
             for k, v in self.model.decoder.state_dict().items():
                 state_dict[f'decoder.{k}'] = v
             state_dict['decoder.embeddings.weight'] = state_dict['embeddings.weight']
@@ -190,28 +189,26 @@ class ImageSeq2seqAgent(TransformerGeneratorAgent, TorchImageAgent):
                 ):
                     raise e
 
-                state_dict.update(
-                    {
-                        'embeddings.weight': torch.cat(
-                            (
-                                embs.to(init_embs.device, dtype=init_embs.dtype),
-                                init_embs[-2:, :],
-                            )
-                        ),
-                        'encoder.embeddings.weight': torch.cat(
-                            (
-                                enc_embs.to(init_embs.device, dtype=init_embs.dtype),
-                                init_embs[-2:, :],
-                            )
-                        ),
-                        'decoder.embeddings.weight': torch.cat(
-                            (
-                                dec_embs.to(init_embs.device, dtype=init_embs.dtype),
-                                init_embs[-2:, :],
-                            )
-                        ),
-                    }
-                )
+                state_dict |= {
+                    'embeddings.weight': torch.cat(
+                        (
+                            embs.to(init_embs.device, dtype=init_embs.dtype),
+                            init_embs[-2:, :],
+                        )
+                    ),
+                    'encoder.embeddings.weight': torch.cat(
+                        (
+                            enc_embs.to(init_embs.device, dtype=init_embs.dtype),
+                            init_embs[-2:, :],
+                        )
+                    ),
+                    'decoder.embeddings.weight': torch.cat(
+                        (
+                            dec_embs.to(init_embs.device, dtype=init_embs.dtype),
+                            init_embs[-2:, :],
+                        )
+                    ),
+                }
                 pct_init = round(embs.shape[0] / len(self.dict) * 100, 1)
                 print(
                     f'Initialized embeddings for {embs.shape[0]} tokens ({pct_init}%)'

@@ -30,7 +30,7 @@ def build(opt):
     dpath = os.path.join(opt['datapath'], 'cmu_dog')
     version = '1.2'
     if not build_data.built(dpath, version):
-        print('[building data: ' + dpath + ']')
+        print(f'[building data: {dpath}]')
         if build_data.built(dpath):
             # An older version exists, so remove these outdated files.
             build_data.remove_dir(dpath)
@@ -150,7 +150,7 @@ def split_into_seen_unseen(dpath: str):
         with PathManager.open(os.path.join(cdir, f"{fold}_deduped.json")) as f:
             data = json.load(f)
         for k, v in data.items():
-            if v["wikiDocumentIdx"] == 1 or v["wikiDocumentIdx"] == 3:
+            if v["wikiDocumentIdx"] in [1, 3]:
                 new["test_unseen"][k] = v
             else:
                 rand = random.randint(1, 95)

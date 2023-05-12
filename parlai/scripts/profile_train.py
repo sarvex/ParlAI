@@ -73,8 +73,7 @@ def profile(opt):
         TrainLoop(opt).train()
         pr.disable()
         s = io.StringIO()
-        sortby = 'cumulative'
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
         ps.print_stats()
         print(s.getvalue())
 

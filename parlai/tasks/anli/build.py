@@ -27,7 +27,7 @@ def build(opt):
     version = ANLI_VERSION
 
     if not build_data.built(dpath, version_string=version):
-        print('[building data: ' + dpath + ']')
+        print(f'[building data: {dpath}]')
 
         if build_data.built(dpath):
             # an older version exists, so remove these outdated files.

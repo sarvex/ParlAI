@@ -42,10 +42,9 @@ class Compatibility(object):
     @staticmethod
     def maybe_fix_act(incompatible_act):
         if 'id' not in incompatible_act:
-            new_act = Compatibility.backward_compatible_force_set(
+            return Compatibility.backward_compatible_force_set(
                 incompatible_act, 'id', 'NULL_ID'
             )
-            return new_act
         return incompatible_act
 
     @staticmethod
@@ -110,22 +109,18 @@ class ImageStack:
                 f'desired {self.num_images:d}!'
             )
 
-        # Make sure that the set of models is correct (i.e. in case we are loading in an
-        # older obsolete version of the stack)
         if set(self.stack[0].keys()) == set(self.models):
             return pointer
-        else:
-            input_ = input(
-                '\n\nWARNING: the currently saved stack has a different set of test '
-                'cases than what is currently being used. Do you want to back up this '
-                'stack file and stretch the stack to fit the new set of models? '
-                '(y/n) '
-            )
-            if input_.lower().strip() == 'y':
-                self.save_stack_backup()
-                return self.stretch_stack()
-            else:
-                raise ValueError('Mismatch in set of models in stack!')
+        input_ = input(
+            '\n\nWARNING: the currently saved stack has a different set of test '
+            'cases than what is currently being used. Do you want to back up this '
+            'stack file and stretch the stack to fit the new set of models? '
+            '(y/n) '
+        )
+        if input_.lower().strip() != 'y':
+            raise ValueError('Mismatch in set of models in stack!')
+        self.save_stack_backup()
+        return self.stretch_stack()
 
     def get_pointer(self) -> int:
         """
@@ -171,15 +166,10 @@ class ImageStack:
                 if model in new_models
             }
             new_workers_by_model = {model: [] for model in models_to_add_list}
-            self.stack[stack_idx] = {
-                **surviving_workers_by_model,
-                **new_workers_by_model,
-            }
+            self.stack[stack_idx] = surviving_workers_by_model | new_workers_by_model
             assert set(self.stack[stack_idx]) == new_models
 
-        pointer = self.get_pointer()
-
-        return pointer
+        return self.get_pointer()
 
     def conditionally_save_stack(self):
         if time.time() - self.last_save_time > self.save_stack_interval:
@@ -242,10 +232,7 @@ class ImageStack:
         Return a stack entry if the input index is less than the length of the stack;
         return None otherwise.
         """
-        if idx < len(self.stack):
-            return self.stack[idx]
-        else:
-            return None
+        return self.stack[idx] if idx < len(self.stack) else None
 
     def get_next_image(self, worker: str) -> Tuple[int, str, bool]:
         """
@@ -296,14 +283,14 @@ class ImageStack:
                 for model, workers in workers_by_model.items()
                 if len(workers) < self.evals_per_combo
             ]
-            if len(available_models) == 0:
+            if not available_models:
                 print(
                     f'WARNING: no more convos needed for any model for '
                     f'{worker_pointer:d}. Picking a random model for worker '
                     f'{worker}.'
                 )
                 available_models = list(workers_by_model.keys())
-            print(f'Available models: ' + ', '.join(available_models))
+            print('Available models: ' + ', '.join(available_models))
             chosen_model = random.choice(available_models)
             print(
                 f'Retrieving stack {worker_pointer:d} for worker {worker} and test '
@@ -314,19 +301,20 @@ class ImageStack:
             return worker_pointer, chosen_model, no_more_work
 
     def remove_worker_from_stack(self, worker: str, stack_idx: int):
-        if any(worker in workers for workers in self.stack[stack_idx].values()):
-            removed = False
-            print(f'Removing worker {worker} from stack {stack_idx:d}.')
-            for this_models_workers in self.stack[stack_idx].values():
-                if worker in this_models_workers:
-                    this_models_workers.remove(worker)
-                    removed = True
-            assert removed is True
-            if stack_idx < self.pointer:
-                print(f'Moving pointer from {self.pointer:d} to {stack_idx:d}.')
-                self.pointer = stack_idx
-        else:
+        if all(
+            worker not in workers for workers in self.stack[stack_idx].values()
+        ):
             raise ValueError(f'Worker {worker} not found in stack {stack_idx:d}!')
+        removed = False
+        print(f'Removing worker {worker} from stack {stack_idx:d}.')
+        for this_models_workers in self.stack[stack_idx].values():
+            if worker in this_models_workers:
+                this_models_workers.remove(worker)
+                removed = True
+        assert removed is True
+        if stack_idx < self.pointer:
+            print(f'Moving pointer from {self.pointer:d} to {stack_idx:d}.')
+            self.pointer = stack_idx
 
 
 class AbstractModelChatTest(AbstractParlAIChatTest, unittest.TestCase):
@@ -388,9 +376,7 @@ class AbstractModelChatTest(AbstractParlAIChatTest, unittest.TestCase):
                             key_inner3,
                             expected_value_inner3,
                         ) in expected_value_inner2.items():
-                            if key_inner3 in keys_to_ignore:
-                                pass
-                            else:
+                            if key_inner3 not in keys_to_ignore:
                                 self.assertEqual(
                                     actual_value[key_inner][key_inner2][key_inner3],
                                     expected_value_inner3,
@@ -421,10 +407,7 @@ def get_context_generator(
     if override_opt is not None:
         argparser.set_params(**override_opt)
     opt = argparser.parse_args([])
-    context_generator = ContextGenerator(opt, datatype='test', seed=0)
-    # We pull from the test set so that the model can't regurgitate
-    # memorized conversations
-    return context_generator
+    return ContextGenerator(opt, datatype='test', seed=0)
 
 
 def get_image_src(
@@ -440,5 +423,4 @@ def get_image_src(
     buffered = BytesIO()
     rgb_image.save(buffered, format='JPEG')
     encoded = str(base64.b64encode(buffered.getvalue()).decode('ascii'))
-    image_src = 'data:image/jpeg;base64,' + encoded
-    return image_src
+    return f'data:image/jpeg;base64,{encoded}'

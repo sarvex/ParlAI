@@ -48,9 +48,9 @@ def detect(opt):
     agent = create_agent(opt, requireModelExists=True)
     world = create_task(opt, agent)
     agent.opt.log()
-    if opt['safety'] == 'string_matcher' or opt['safety'] == 'all':
+    if opt['safety'] in ['string_matcher', 'all']:
         offensive_string_matcher = OffensiveStringMatcher()
-    if opt['safety'] == 'classifier' or opt['safety'] == 'all':
+    if opt['safety'] in ['classifier', 'all']:
         offensive_classifier = OffensiveLanguageClassifier()
 
     log_every_n_secs = opt.get('log_every_n_secs', -1)
@@ -83,16 +83,18 @@ def detect(opt):
     def classify(text, stats):
         offensive = False
         stats['total'] += 1
-        if opt['safety'] == 'string_matcher' or opt['safety'] == 'all':
+        if opt['safety'] in ['string_matcher', 'all']:
             bad_words = offensive_string_matcher.contains_offensive_language(text)
             if bad_words:
                 stats['string_offensive'] += 1
                 offensive = True
                 stats['bad_words'].append(bad_words)
-        if opt['safety'] == 'classifier' or opt['safety'] == 'all':
-            if text in offensive_classifier:
-                stats['classifier_offensive'] += 1
-                offensive = True
+        if (
+            opt['safety'] in ['classifier', 'all']
+            and text in offensive_classifier
+        ):
+            stats['classifier_offensive'] += 1
+            offensive = True
         if offensive:
             stats['total_offensive'] += 1
 

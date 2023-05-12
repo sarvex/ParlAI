@@ -167,13 +167,11 @@ class ContextWithImageEncoder(TransformerEncoder):
         assert positions is not None
         assert segments is not None
 
-        valid_inds = [
+        if valid_inds := [
             i
             for i, img in enumerate(images)
             if img is not None and isinstance(img, torch.Tensor)
-        ]
-
-        if valid_inds:
+        ]:
             image_mask_list = []
             image_encoded_list = []
 
@@ -262,15 +260,19 @@ class ContextWithImageEncoder(TransformerEncoder):
                 src_tokens, segments=torch.zeros_like(src_tokens)  # type: ignore
             )
         if image_features is not None:
-            # sometimes can just be a list of None
-            valid_imgs = [v for v in image_features if isinstance(v, torch.Tensor)]
-            segments: Optional[torch.LongTensor] = None
-            if valid_imgs:
+            if valid_imgs := [
+                v for v in image_features if isinstance(v, torch.Tensor)
+            ]:
                 segments = torch.ones(  # type: ignore
-                    (len(image_features), self.n_image_channels * self.n_image_tokens),
+                    (
+                        len(image_features),
+                        self.n_image_channels * self.n_image_tokens,
+                    ),
                     dtype=torch.long,
                     device=valid_imgs[0].device,
                 )
+            else:
+                segments = None
             image_tensor, image_mask = self.encode_images(
                 image_features, segments=segments
             )
@@ -370,7 +372,7 @@ class ContextWithImageEncoder(TransformerEncoder):
             The result of concatenating all non-null objects in tensors
         """
         non_null_tensors: List[torch.Tensor] = [t for t in tensors if t is not None]
-        return torch.cat([t for t in non_null_tensors], dim=1)
+        return torch.cat(list(non_null_tensors), dim=1)
 
     def _fix_for_fp16(
         self, full_enc: torch.Tensor, full_mask: Optional[torch.Tensor]

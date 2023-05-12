@@ -92,10 +92,11 @@ class BertConversionUtils:
             key[prefix_len:]: value
             for (key, value) in saved_state['model_dict'].items()
             if key.startswith(prefix)
+        } | {
+            k: v
+            for k, v in saved_state['model_dict'].items()
+            if 'encode_proj' in k
         }
-        encoder_state.update(
-            {k: v for k, v in saved_state['model_dict'].items() if 'encode_proj' in k}
-        )
         try:
             model_to_load.load_state_dict(encoder_state)
         except RuntimeError:
@@ -117,7 +118,7 @@ class BertConversionUtils:
             return a state_dict that fits with ParlAI Models.
         """
         return_dict = OrderedDict()
-        for each_key in state_dict.keys():
+        for each_key in state_dict:
             mapped_key = each_key
 
             # 0. Skip pooler

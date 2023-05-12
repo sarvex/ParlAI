@@ -86,10 +86,10 @@ def _run_conversation(module: nn.Module, inputs: List[str]):
     """
     context = []
     for input_ in inputs:
-        print(' TEXT: ' + input_)
+        print(f' TEXT: {input_}')
         context.append(input_)
         label = module('\n'.join(context))
-        print("LABEL: " + label)
+        print(f"LABEL: {label}")
         context.append(label)
 
 

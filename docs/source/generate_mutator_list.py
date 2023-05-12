@@ -30,7 +30,7 @@ def _make_argparse_table(class_):
             if hasattr(action, 'hidden') and action.hidden:
                 # some options are marked hidden
                 continue
-            if action.dest == argparse.SUPPRESS or action.dest == 'help':
+            if action.dest in [argparse.SUPPRESS, 'help']:
                 continue
             action_strings = ",  ".join(f'`{a}`' for a in action.option_strings)
             description = []
@@ -65,9 +65,13 @@ def _make_argparse_table(class_):
         if not actions:
             continue
 
-        readme.append(f'__{ag.title.title()}__\n\n')
-        readme.append("| Argument | Description |\n")
-        readme.append("|----------|----------|\n")
+        readme.extend(
+            (
+                f'__{ag.title.title()}__\n\n',
+                "| Argument | Description |\n",
+                "|----------|----------|\n",
+            )
+        )
         for row in actions:
             text = "| " + " | ".join(row) + " |"
             text = text.replace("\n", "<br>")

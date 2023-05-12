@@ -42,7 +42,7 @@ def get_class_name(item):
     # - split up the rest by class name because slow tests tend to be in
     #   the same module
     if class_name and '.tasks.' not in module_name:
-        return "{}.{}".format(module_name, class_name)
+        return f"{module_name}.{class_name}"
     else:
         return module_name
 
@@ -89,7 +89,7 @@ def pytest_collection_modifyitems(config, items):
         else:
             assert "/" not in rel_path[6:], f"Couldn't categorize '{rel_path}'"
             item.add_marker("unit")
-            if marker_expr != 'unit' and marker_expr != '':
+            if marker_expr not in ['unit', '']:
                 deselected.append(item)
 
     # kill everything that wasn't grabbed

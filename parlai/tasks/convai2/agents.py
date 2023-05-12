@@ -34,7 +34,7 @@ def _path(opt, persona, use_cands):
     if datatype == 'test':
         warn_once("WARNING: Test set not included. Setting datatype to valid.")
         datatype = 'valid'
-    dt = datatype + '_' + persona
+    dt = f'{datatype}_{persona}'
     cands = '' if use_cands else '_no_cands'
     return os.path.join(opt['datapath'], 'ConvAI2', dt + cands + '.txt')
 
@@ -44,7 +44,7 @@ class BothTeacher(FbDeprecatedDialogTeacher):
         opt = copy.deepcopy(opt)
         try:
             cands = opt['task'].split(":")[2]
-            use_cands = False if cands == 'no_cands' else True
+            use_cands = cands != 'no_cands'
         except Exception:
             use_cands = True
         opt['datafile'] = _path(opt, 'both_original', use_cands)
@@ -56,7 +56,7 @@ class NoneTeacher(FbDeprecatedDialogTeacher):
         opt = copy.deepcopy(opt)
         try:
             cands = opt['task'].split(":")[2]
-            use_cands = False if cands == 'no_cands' else True
+            use_cands = cands != 'no_cands'
         except Exception:
             use_cands = True
         opt['datafile'] = _path(opt, 'none_original', use_cands)
@@ -68,7 +68,7 @@ class SelfOriginalTeacher(FbDeprecatedDialogTeacher):
         opt = copy.deepcopy(opt)
         try:
             cands = opt['task'].split(":")[2]
-            use_cands = False if cands == 'no_cands' else True
+            use_cands = cands != 'no_cands'
         except Exception:
             use_cands = True
         opt['datafile'] = _path(opt, 'self_original', use_cands)
@@ -84,7 +84,7 @@ class SelfRevisedTeacher(FbDeprecatedDialogTeacher):
         opt = copy.deepcopy(opt)
         try:
             cands = opt['task'].split(":")[2]
-            use_cands = False if cands == 'no_cands' else True
+            use_cands = cands != 'no_cands'
         except Exception:
             use_cands = True
         opt['datafile'] = _path(opt, 'self_revised', use_cands)
@@ -127,12 +127,12 @@ class NormalizedTeacherTrait(object):
                 # Normalize the sentence appearing after 'your persona:'
                 x = x[len('your persona: ') :]
                 x = normalize_reply(x)
-                x = 'your persona: ' + x
+                x = f'your persona: {x}'
                 your_personas.append(x)
             elif x.startswith("partner's persona: "):
                 x = x[len("partner's persona: ") :]
                 x = normalize_reply(x)
-                x = "partner's persona: " + x
+                x = f"partner's persona: {x}"
                 partner_personas.append(x)
             else:
                 x = normalize_reply(x)
@@ -180,7 +180,7 @@ class NormalizedTheirTeacher(NormalizedTeacherTrait, BothTeacher):
             elif x.startswith("partner's persona: "):
                 x = x[len("partner's persona: ") :]
                 x = normalize_reply(x)
-                x = "partner's persona: " + x
+                x = f"partner's persona: {x}"
             else:
                 x = normalize_reply(x)
             xs2.append(x)

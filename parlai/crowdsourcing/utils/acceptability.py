@@ -41,14 +41,12 @@ class AcceptabilityChecker:
         """
 
         if any(
-            [
-                violation_type not in self.ALL_VIOLATION_TYPES
-                for violation_type in violation_types
-            ]
+            violation_type not in self.ALL_VIOLATION_TYPES
+            for violation_type in violation_types
         ):
             raise ValueError('One or more violation types are unrecognized!')
 
-        if len(messages) == 0:
+        if not messages:
             # There may have been a disconnect, so in this case let's give them a pass
             return ''
 
@@ -56,7 +54,7 @@ class AcceptabilityChecker:
 
         # Do messages have the minimum acceptable average number of words?
         if 'min_words' in violation_types:
-            total_num_words = sum([len(message.split()) for message in messages])
+            total_num_words = sum(len(message.split()) for message in messages)
             if total_num_words / len(messages) < 3:
                 violations.append('under_min_length')
 
@@ -77,12 +75,11 @@ class AcceptabilityChecker:
                 'howdy',
                 'greetings',
             ]
-            if is_worker_0 and (
-                sum(
-                    [
-                        messages[0].split()[0].lower() == greeting
-                        for greeting in greetings
-                    ]
+            if (
+                is_worker_0
+                and sum(
+                    messages[0].split()[0].lower() == greeting
+                    for greeting in greetings
                 )
                 > 0
             ):
@@ -90,24 +87,25 @@ class AcceptabilityChecker:
 
         # Does the Turker tend to speak in all caps?
         if 'all_caps' in violation_types:
-            num_all_caps = sum([message == message.upper() for message in messages])
+            num_all_caps = messages.count(message.upper())
             if num_all_caps >= 2 or (num_all_caps == 1 and len(messages) == 1):
                 violations.append('too_much_all_caps')
 
         # Are later messages an exact match of the first one?
-        if 'exact_match' in violation_types:
-            if len(messages) >= 2:
-                c = messages[0]
-                if exact_match(c, messages[1:]):
-                    violations.append('exact_match')
+        if 'exact_match' in violation_types and len(messages) >= 2:
+            c = messages[0]
+            if exact_match(c, messages[1:]):
+                violations.append('exact_match')
 
         # Do the messages not pass the safety classifier?
         if 'safety' in violation_types:
-            for idx, message in enumerate(messages):
-                if self.offensive_lang_detector.contains_offensive_language(message):
-                    violations.append(f'unsafe:{idx+1:d}')
-                    # The messages are 1-indexed
-
+            violations.extend(
+                f'unsafe:{idx + 1:d}'
+                for idx, message in enumerate(messages)
+                if self.offensive_lang_detector.contains_offensive_language(
+                    message
+                )
+            )
         return ','.join(violations)
 
 
@@ -140,7 +138,4 @@ def exact_match(guess, answers):
     if guess is None or answers is None:
         return False
     guess = normalize_answer(guess)
-    for a in answers:
-        if guess == normalize_answer(a):
-            return True
-    return False
+    return any(guess == normalize_answer(a) for a in answers)

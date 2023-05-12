@@ -10,7 +10,7 @@ category_zoo_list = {}
 for model_dict in model_list:
     task = model_dict.get('task', None)
     if ':' in task:
-        task = task[0 : task.find(':')]  # strip detailed task name
+        task = task[:task.find(':')]
     if task not in category_zoo_list:
         category_zoo_list[task] = []
     category_zoo_list[task].append(model_dict)
@@ -49,9 +49,7 @@ def model_text(model_dict, fout):
     if 'example' in model:
         example = model['example']
     else:
-        example = "parlai eval_model --model {} --task {} --model-file {}".format(
-            model['agent'], model['task'], model['path']
-        )
+        example = f"parlai eval_model --model {model['agent']} --task {model['task']} --model-file {model['path']}"
     fout.write(example_to_code(example, model.get('result')))
     fout.write('\n\n')
 
@@ -60,17 +58,14 @@ def model_text(model_dict, fout):
         fout.write('\n\n')
 
 
-fout = open('zoo_list.inc', 'w')
+with open('zoo_list.inc', 'w') as fout:
+    for task_name in category_zoo_list:
+        s = task_name.replace('_', ' ')
+        if s[0] == s[0].lower():
+            s = s.title()
+        fout.write(f'## {s} models\n')
 
-for task_name in category_zoo_list:
-    s = task_name.replace('_', ' ')
-    if s[0] == s[0].lower():
-        s = s.title()
-    fout.write(f'## {s} models\n')
+        for model in category_zoo_list[task_name]:
+            model_text(model, fout)
 
-    for model in category_zoo_list[task_name]:
-        model_text(model, fout)
-
-    fout.write('\n\n---------\n\n')
-
-fout.close()
+        fout.write('\n\n---------\n\n')

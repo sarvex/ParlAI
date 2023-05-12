@@ -25,19 +25,10 @@ def _path(exsz, task, opt, dt=''):
 
 
 def mod_labels(ys, task):
-    if ys is not None:
-        # replace comma-labeled babi tasks with spaces
-        # this is more friendly to our tokenizer which makes commas full tokens
-        # this way models won't be penalized for not generating a comma
-        if task == '8':
-            # holding: labels like 'milk,cookies,football'
-            # replace with spaces 'milk football cookies'
-            ys = [y.replace(',', ' ') for y in ys]
-        elif task == '19':
-            # pathfinding: labels like 'n,e' or 's,w'
-            # replace with spaces, 'n e'
-            ys = [y.replace(',', ' ') for y in ys]
-
+    if ys is not None and task in ['8', '19']:
+        # holding: labels like 'milk,cookies,football'
+        # replace with spaces 'milk football cookies'
+        ys = [y.replace(',', ' ') for y in ys]
     return ys
 
 

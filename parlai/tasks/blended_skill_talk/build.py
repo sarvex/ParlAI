@@ -74,7 +74,7 @@ def build(opt):
     version = 'v1.5'
 
     if not build_data.built(dpath, version_string=version):
-        print('[building data: ' + dpath + ']')
+        print(f'[building data: {dpath}]')
         if build_data.built(dpath):
             # An older version exists, so remove these outdated files
             build_data.remove_dir(dpath)
@@ -177,7 +177,7 @@ def _get_line(episode: dict, num_entries: int, entry_idx: int) -> str:
         **single_task_suggestions,
         'guided_chosen_suggestion': guided_chosen_suggestion,
     }
-    assert all([isinstance(part, str) for part in parts.values()])
+    assert all(isinstance(part, str) for part in parts.values())
     line = '\t'.join([f'{key}:{_escape(value)}' for key, value in parts.items()])
 
     # Add episode_done
@@ -189,7 +189,7 @@ def _get_line(episode: dict, num_entries: int, entry_idx: int) -> str:
         label_candidates = episode['label_candidates'][entry_idx]
         # Note that episode['dialog'] is indexed by utterance (from either Turker) and
         # episode['label_candidates'] is indexed by guided Turker response
-        assert all([isinstance(cand, str) for cand in label_candidates])
+        assert all(isinstance(cand, str) for cand in label_candidates)
         escaped_label_candidates = [_escape(cand) for cand in label_candidates]
         line += '\tlabel_candidates:' + '|'.join(escaped_label_candidates)
     return line

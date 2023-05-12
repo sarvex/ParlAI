@@ -23,10 +23,7 @@ class CommonSenseQATeacher(FixedDialogTeacher):
         super().__init__(opt, shared)
         self.id = 'commonsenseqa'
         build(opt)
-        if shared is not None:
-            self.episodes = shared['episodes']
-        else:
-            self.episodes = self.setup_data()
+        self.episodes = shared['episodes'] if shared is not None else self.setup_data()
         self.reset()
 
     def share(self):
@@ -45,8 +42,7 @@ class CommonSenseQATeacher(FixedDialogTeacher):
             raise ValueError('Datatype not train, test, or valid')
         episodes = []
         with PathManager.open(dpath) as f:
-            for line in f:
-                episodes.append(json.loads(line))
+            episodes.extend(json.loads(line) for line in f)
         # There are 1221 episodes in the test set. Making the valid set this
         # large will make about an 80/10/10 split, as the paper had for splits.
         test_set_episodes = 1221
@@ -70,14 +66,13 @@ class CommonSenseQATeacher(FixedDialogTeacher):
             if choice['label'] == answer:
                 labels = [choice['text']]
             candidates.append(choice['text'])
-        action = {
+        return {
             'id': self.id,
             'text': episode['question']['stem'],
             'episode_done': True,
             'labels': labels,
             'label_candidates': candidates,
         }
-        return action
 
 
 class DefaultTeacher(CommonSenseQATeacher):

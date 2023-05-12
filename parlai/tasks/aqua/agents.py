@@ -36,13 +36,11 @@ def _path(opt):
     else:
         raise RuntimeError('Not valid datatype.')
 
-    data_path = os.path.join(opt['datapath'], AQUA, AQUA, prefix + '.tok.json')
-
-    return data_path
+    return os.path.join(opt['datapath'], AQUA, AQUA, f'{prefix}.tok.json')
 
 
 def setup_data(path):
-    print('loading: ' + path)
+    print(f'loading: {path}')
 
     with PathManager.open(path, 'r') as data_file:
         for line in data_file:

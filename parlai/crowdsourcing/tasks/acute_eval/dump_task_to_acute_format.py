@@ -72,7 +72,7 @@ def dump_data(opt):
     speaker_1_id = opt.get('speaker_1_id') or f'{task}_as_model'
     if opt['outfile'] is None:
         outfile = tempfile.mkstemp(
-            prefix='{}_{}_'.format(opt['task'], opt['datatype']), suffix='.txt'
+            prefix=f"{opt['task']}_{opt['datatype']}_", suffix='.txt'
         )[1]
     else:
         outfile = opt['outfile']

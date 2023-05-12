@@ -205,8 +205,8 @@ class _SupercommandParser(ParlaiParser):
         assert len(spa) == 1
         spa = spa[0]
         for choices_action in spa._choices_actions:
-            dest = choices_action.dest
             if choices_action.help == argparse.SUPPRESS:
+                dest = choices_action.dest
                 choices_action.help = spa.choices[dest].description
 
     def print_helpall(self):
@@ -321,7 +321,7 @@ def superscript_main(args=None):
         exit(0)
     elif cmd == 'help' or cmd is None:
         parser.print_help()
-    elif cmd is not None:
+    else:
         return SCRIPT_REGISTRY[cmd].klass._run_from_parser_and_opt(opt, parser)
 
 

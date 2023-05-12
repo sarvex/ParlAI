@@ -130,14 +130,15 @@ class MessengerOverworld(World):
         if a is not None and a['text'].lower() == 'exit':
             self.episode_done = True
             return 'EXIT'
-        if a is not None and a['text'].lower() == 'begin':
-            self.episodeDone = True
-            return 'default'
-        elif a is not None:
-            self.agent.observe(
-                {
-                    'id': 'Overworld',
-                    'text': 'Invalid option. Please type "begin".',
-                    'quick_replies': ['begin'],
-                }
-            )
+        if a is not None:
+            if a['text'].lower() == 'begin':
+                self.episodeDone = True
+                return 'default'
+            else:
+                self.agent.observe(
+                    {
+                        'id': 'Overworld',
+                        'text': 'Invalid option. Please type "begin".',
+                        'quick_replies': ['begin'],
+                    }
+                )

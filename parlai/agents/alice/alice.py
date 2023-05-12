@@ -73,8 +73,7 @@ class AliceAgent(Agent):
         if obs is None:
             return {'text': 'Nothing to reply to yet.'}
 
-        reply = {}
-        reply['id'] = self.getID()
+        reply = {'id': self.getID()}
         query = obs.get('text', "I don't know")
         reply['text'] = self.kern.respond(query)
 

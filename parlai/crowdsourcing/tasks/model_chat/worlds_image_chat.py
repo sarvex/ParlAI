@@ -51,7 +51,7 @@ class ModelImageChatWorld(BaseModelChatWorld):
         image_act_for_human = {
             'episode_done': False,
             'id': system_id,
-            'text': f"""Welcome! You'll now have a conversation with your partner.
+            'text': """Welcome! You'll now have a conversation with your partner.
 
 <-- FIRST, YOUR PARTNER WILL SAY SOMETHING ABOUT THIS IMAGE TO YOUR LEFT.
 

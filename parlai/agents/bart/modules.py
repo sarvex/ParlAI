@@ -22,10 +22,7 @@ class BartModel(TransformerGeneratorModel):
 
         Override standard TGM output to _not_ prevent generation of BOS.
         """
-        # project back to vocabulary
-        output = F.linear(tensor, self.embeddings.weight)
-
-        return output
+        return F.linear(tensor, self.embeddings.weight)
 
     def _get_initial_forced_decoder_input(self, bsz: int, inputs: torch.LongTensor):
         """
@@ -60,7 +57,7 @@ class BartModel(TransformerGeneratorModel):
         """
         # we only have this method called when it's actually being used
         assert incremental_state is not None
-        assert len(incremental_state) > 0
+        assert incremental_state
 
         for incr_state_l in incremental_state.values():
             assert 'self_attn' in incr_state_l

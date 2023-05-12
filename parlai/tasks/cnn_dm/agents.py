@@ -34,7 +34,7 @@ def _fix_missing_period(line):
     ]  # acceptable ways to end a sentence
     if "@highlight" in line or line == "" or line[-1] in END_TOKENS:
         return line
-    return line + "."
+    return f"{line}."
 
 
 class CNNDMTeacher(DialogTeacher):
@@ -53,7 +53,7 @@ class CNNDMTeacher(DialogTeacher):
     def _path(self, opt):
         build(opt)
         dt = opt['datatype'].split(':')[0]
-        return os.path.join(self.datapath, dt + '.txt')
+        return os.path.join(self.datapath, f'{dt}.txt')
 
     def setup_data(self, input_path):
         self.question = 'What is the summary?'
@@ -61,7 +61,7 @@ class CNNDMTeacher(DialogTeacher):
         num_missing = 0
         num_added = 0
 
-        print('loading: ' + input_path)
+        print(f'loading: {input_path}')
 
         with PathManager.open(input_path) as stories_file:
             for story in stories_file:
@@ -93,7 +93,7 @@ class CNNDMTeacher(DialogTeacher):
                 label = [unicodedata.normalize('NFKC', ' '.join(highlights))]
                 yield ((text, label, None, None), new_episode)
 
-        print("{} stories added, {} stories missing.".format(num_added, num_missing))
+        print(f"{num_added} stories added, {num_missing} stories missing.")
 
 
 class DefaultTeacher(CNNDMTeacher):

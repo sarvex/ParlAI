@@ -28,7 +28,7 @@ def buildImage(opt):
     version = '1'
 
     if not build_data.built(dpath, version_string=version):
-        print('[building image data: ' + dpath + ']')
+        print(f'[building image data: {dpath}]')
         if build_data.built(dpath):
             # An older version exists, so remove these outdated files.
             build_data.remove_dir(dpath)
@@ -48,7 +48,7 @@ def build(opt):
 
     # check if data had been previously built
     if not build_data.built(dpath, version_string=version):
-        print('[building data: ' + dpath + ']')
+        print(f'[building data: {dpath}]')
 
         # make a clean directory if needed
         if build_data.built(dpath):

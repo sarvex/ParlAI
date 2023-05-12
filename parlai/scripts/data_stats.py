@@ -127,7 +127,7 @@ def verify(opt):
                 counts[f'{itype}/utterances'] += 1
                 counts['both/utterances'] += 1
                 counts[f'{itype}/avg_utterance_length'] += AverageMetric(len(retxt), 1)
-                counts[f'both/avg_utterance_length'] += AverageMetric(len(retxt), 1)
+                counts['both/avg_utterance_length'] += AverageMetric(len(retxt), 1)
                 for t in retxt:
                     if t not in counts[f'{itype}/token_dict']:
                         counts[f'{itype}/unique_tokens'] += 1

@@ -24,7 +24,7 @@ def build(opt):
     version = 'v1.0'
 
     if not build_data.built(dpath, version_string=version):
-        print('[building data: ' + dpath + ']')
+        print(f'[building data: {dpath}]')
         # An older version exists, so remove these outdated files.
         if build_data.built(dpath):
             build_data.remove_dir(dpath)

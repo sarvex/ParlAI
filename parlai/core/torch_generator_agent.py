@@ -77,13 +77,13 @@ class SearchBlocklist(object):
         if not phrase:
             return
         self._add_literal(phrase)
-        self._add_literal(phrase + "s")
+        self._add_literal(f"{phrase}s")
         self._add_literal(phrase.lower())
-        self._add_literal(phrase.lower() + "s")
+        self._add_literal(f"{phrase.lower()}s")
         self._add_literal(phrase.upper())
-        self._add_literal(phrase.upper() + "S")
+        self._add_literal(f"{phrase.upper()}S")
         self._add_literal(phrase.title())
-        self._add_literal(phrase.title() + "S")
+        self._add_literal(f"{phrase.title()}S")
         self._add_literal(phrase[0].upper() + phrase[1:])
         self._add_literal(phrase[0].upper() + phrase[1:] + "s")
         self._add_literal(phrase[0].upper() + phrase[1:].lower())
@@ -338,10 +338,7 @@ class TorchGeneratorAgent(TorchAgent, ABC):
         # greedy. New behavior is --inference greedy or --inference beam.
         if 'inference' not in opt_from_disk:
             assert 'beam_size' in opt_from_disk
-            if opt_from_disk['beam_size'] == 1:
-                method = 'greedy'
-            else:
-                method = 'beam'
+            method = 'greedy' if opt_from_disk['beam_size'] == 1 else 'beam'
             opt_from_disk['inference'] = method
             warn_once(f'Old model inference method inferred as {method}')
 
@@ -605,15 +602,10 @@ class TorchGeneratorAgent(TorchAgent, ABC):
             self.backward(loss)
             self.buffer_initialized = True
         except RuntimeError as e:
-            if 'out of memory' in str(e):
-                m = (
-                    'CUDA OOM: Lower batch size (-bs) from {} or lower '
-                    ' max sequence length (-tr) from {}'
-                    ''.format(self.opt['batchsize'], self.opt['truncate'])
-                )
-                raise RuntimeError(m)
-            else:
+            if 'out of memory' not in str(e):
                 raise e
+            m = f"CUDA OOM: Lower batch size (-bs) from {self.opt['batchsize']} or lower  max sequence length (-tr) from {self.opt['truncate']}"
+            raise RuntimeError(m)
 
     def reset_metrics(self):
         """
@@ -715,10 +707,7 @@ class TorchGeneratorAgent(TorchAgent, ABC):
         # actually do backwards loss
         loss = loss.sum()
         loss /= target_tokens.sum()  # average loss per token
-        if return_output:
-            return (loss, model_output)
-        else:
-            return loss
+        return (loss, model_output) if return_output else loss
 
     def train_step(self, batch):
         """
@@ -736,18 +725,16 @@ class TorchGeneratorAgent(TorchAgent, ABC):
             self.update_params()
             oom_sync = False
         except RuntimeError as e:
-            # catch out of memory exceptions during fwd/bck (skip batch)
-            if 'out of memory' in str(e):
-                oom_sync = True
-                logging.error(
-                    'Ran out of memory, skipping batch. '
-                    'if this happens frequently, decrease batchsize or '
-                    'truncate the inputs to the model.'
-                )
-                self.global_metrics.add('skipped_batches', SumMetric(1))
-            else:
+            if 'out of memory' not in str(e):
                 raise e
 
+            oom_sync = True
+            logging.error(
+                'Ran out of memory, skipping batch. '
+                'if this happens frequently, decrease batchsize or '
+                'truncate the inputs to the model.'
+            )
+            self.global_metrics.add('skipped_batches', SumMetric(1))
         if oom_sync:
             # moved outside of the try-except because the raised exception in scope
             # actually prevents from the data being freed, which can sometimes cause
@@ -764,18 +751,15 @@ class TorchGeneratorAgent(TorchAgent, ABC):
         score_view = scores.reshape(-1, scores.size(-1))
         losses = self.criterion(score_view, labels.view(-1)).view(len(labels), -1)
 
-        # Zip decoded tokens with losses
-        token_losses = []
-        for i, label in enumerate(labels):
-            token_losses.append(
-                list(
-                    zip(
-                        [self.dict[token] for token in label.tolist()],
-                        losses[i].tolist(),
-                    )
+        return [
+            list(
+                zip(
+                    [self.dict[token] for token in label.tolist()],
+                    losses[i].tolist(),
                 )
             )
-        return token_losses
+            for i, label in enumerate(labels)
+        ]
 
     def _compute_fairseq_bleu(self, batch: Batch, preds):
         """
@@ -850,10 +834,7 @@ class TorchGeneratorAgent(TorchAgent, ABC):
         """
         if batch.text_vec is None and batch.image is None:
             return
-        if batch.text_vec is not None:
-            bsz = batch.text_vec.size(0)
-        else:
-            bsz = len(batch.image)
+        bsz = len(batch.image) if batch.text_vec is None else batch.text_vec.size(0)
         self.model.eval()
         cand_scores = None
         token_losses = None
@@ -985,10 +966,11 @@ class TorchGeneratorAgent(TorchAgent, ABC):
             # We aren't context blocking, return empty tensor
             return torch.LongTensor()
 
-        ctxt = batch.text_vec[batch_idx]
-        if self.beam_block_full_context:
-            ctxt = batch.full_text_vec[batch_idx]
-        return ctxt
+        return (
+            batch.full_text_vec[batch_idx]
+            if self.beam_block_full_context
+            else batch.text_vec[batch_idx]
+        )
 
     def _get_batch_context(self, batch):
         """
@@ -998,10 +980,7 @@ class TorchGeneratorAgent(TorchAgent, ABC):
             # We aren't context blocking, return empty tensor of the correct size
             return torch.zeros(batch.batchsize, 0, dtype=torch.long)
 
-        ctxt = batch.text_vec
-        if self.beam_block_full_context:
-            ctxt = batch.full_text_vec
-        return ctxt
+        return batch.full_text_vec if self.beam_block_full_context else batch.text_vec
 
     def _get_initial_decoder_input(
         self, bsz: int, beam_size: int, dev: torch.device
@@ -1045,8 +1024,7 @@ class TorchGeneratorAgent(TorchAgent, ABC):
             return decoder input for next timestep
         """
         prev_input = torch.index_select(prev_input, 0, incr_state_inds)
-        decoder_input = torch.cat([prev_input, selection], dim=-1)
-        return decoder_input
+        return torch.cat([prev_input, selection], dim=-1)
 
     def get_prefix_tokens(self, batch: Batch) -> Optional[torch.LongTensor]:
         """
@@ -1278,7 +1256,7 @@ class TreeSearch(object):
         self.eos_top = False
         self.eos_top_ts = None
         self.n_best_counter = 0
-        self.partial_hyps = [[self.bos] for i in range(beam_size)]
+        self.partial_hyps = [[self.bos] for _ in range(beam_size)]
 
     def set_context(self: TSType, context: torch.LongTensor) -> TSType:
         """
@@ -1556,7 +1534,7 @@ class TreeSearch(object):
         # check that there is at least one finished candidate
         # and assert that each of them contains only one EOS
         assert (
-            len(n_best_list) >= 1
+            n_best_list
         ), f'TreeSearch returned {len(n_best_list)} candidates, must be >= 1'
         for (pred, score) in n_best_list:
             assert (pred == self.eos).sum() == 1, (
@@ -1598,7 +1576,7 @@ class BeamSearch(TreeSearch):
         """
         # if numel is 1, then this is the first time step, only one hyp is expanded
         if prior_scores.numel() == 1:
-            logprobs = logprobs[0:1]
+            logprobs = logprobs[:1]
 
         # beam search actually looks over all hypotheses together so we flatten
         beam_scores = logprobs + prior_scores.unsqueeze(1).expand_as(logprobs)

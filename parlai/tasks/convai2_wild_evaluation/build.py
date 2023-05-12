@@ -22,11 +22,9 @@ RESOURCES = [
 def make_parlai_format(data: list, dpath: str):
     train_p = 0.6
     valid_p = 0.2
-    test_p = 1 - (train_p + valid_p)
-
     assert train_p > 0
     assert valid_p > 0
-    assert test_p > 0
+    assert train_p + valid_p < 1
 
     data_len = len(data)
 
@@ -60,7 +58,7 @@ def build(opt):
     dpath = os.path.join(opt['datapath'], 'ConvAI2_wild_evaluation')
 
     if not build_data.built(dpath, version):
-        print('[building data: ' + dpath + ']')
+        print(f'[building data: {dpath}]')
 
         if build_data.built(dpath):
             # An older version exists, so remove these outdated files.

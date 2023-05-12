@@ -78,7 +78,7 @@ def gen_html(
 
     :return: HTML string for the desired conversation
     """
-    html_str = f"""<html>
+    return f"""<html>
 <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <title> {title} </title>
@@ -151,7 +151,6 @@ def gen_html(
 </body>
 </html>
     """
-    return html_str
 
 
 def pre_process(fname, num_ex, alt_speaker):
@@ -187,7 +186,7 @@ def prBlueBG(text):
 
     :param text: The text to be printed
     """
-    print("\033[44m{}\033[0m".format(text), sep="")
+    print(f"\033[44m{text}\033[0m", sep="")
 
 
 def display_cli(conversations, alt_speaker, human_speaker):
@@ -259,16 +258,18 @@ def check_icon_arg(src, default):
 
     :return: src (possibly pre-pended with "file://")
     """
-    if src != default:
-        # check if URl
-        if not src.startswith('https://') and not src.startswith('http://'):
+    if (
+        src != default
+        and not src.startswith('https://')
+        and not src.startswith('http://')
+    ):
             # Either a file or incorrect input
-            if os.path.isabs(src):
-                src = "file://" + src
-            else:
-                raise IOError(
-                    f"Please provide a valid URL or valid *absolute* path to icon: {src}"
-                )
+        if os.path.isabs(src):
+            src = f"file://{src}"
+        else:
+            raise IOError(
+                f"Please provide a valid URL or valid *absolute* path to icon: {src}"
+            )
     return src
 
 
@@ -307,7 +308,6 @@ def render_convo(opt):
     # Display on CLI
     if output_file is None:
         display_cli(dialogs, alt_speaker, "human")
-    # Some form of output file
     else:
         html_str = gen_html(
             dialogs,
@@ -326,7 +326,7 @@ def render_convo(opt):
         else:
             # create temp dir
             with tempfile.TemporaryDirectory() as tmpdir:
-                fname = tmpdir + "/interim.html"  # save html to interim.html in tmpdir
+                fname = f"{tmpdir}/interim.html"
                 with PathManager.open(fname, "w") as file_handle:
                     file_handle.write(html_str)
                     if extension == "pdf":

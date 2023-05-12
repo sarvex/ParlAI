@@ -16,7 +16,7 @@ def _path(opt):
 
     # set up path to data (specific to each dataset)
     dt = opt['datatype'].split(':')[0]
-    return os.path.join(opt['datapath'], 'ConvAI2_wild_evaluation', dt + '.txt')
+    return os.path.join(opt['datapath'], 'ConvAI2_wild_evaluation', f'{dt}.txt')
 
 
 class DefaultTeacher(ParlAIDialogTeacher):

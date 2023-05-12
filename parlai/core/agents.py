@@ -85,8 +85,7 @@ class Agent(object):
         if hasattr(self, 'observation') and self.observation is not None:
             logging.info(f'agent received observation:\n{self.observation}')
 
-        t = {}
-        t['text'] = 'hello, teacher!'
+        t = {'text': 'hello, teacher!'}
         logging.info(f'agent sending message:\n{t}')
         return t
 
@@ -145,10 +144,7 @@ class Agent(object):
         to also add model weights, teacher data, etc. This especially useful for
         avoiding providing pointers to large objects to all agents in a batch.
         """
-        shared = {}
-        shared['class'] = type(self)
-        shared['opt'] = self.opt
-        return shared
+        return {'class': type(self), 'opt': self.opt}
 
     def shutdown(self):
         """
@@ -204,9 +200,7 @@ class Agent(object):
         agents = []
         for i, message in enumerate(messages):
             if 'text' not in message:
-                raise RuntimeError(
-                    'The agent needs a \'text\' field in the {}th message.'.format(i)
-                )
+                raise RuntimeError(f"The agent needs a \'text\' field in the {i}th message.")
             if 'episode_done' not in message:
                 message['episode_done'] = True
             agent = self.clone()
@@ -276,7 +270,6 @@ def compare_init_model_opts(opt: Opt, curr_opt: Opt):
         return
     init_model_opt = Opt.load(optfile)
 
-    extra_opts = {}
     different_opts = {}
     exempt_opts = [
         'model_file',
@@ -300,32 +293,21 @@ def compare_init_model_opts(opt: Opt, curr_opt: Opt):
             else:
                 different_opts[k] = v
 
-    # search through opts to load
-    for k, v in curr_opt.items():
-        if k not in exempt_opts and k not in init_model_opt:
-            if isinstance(v, list):
-                extra_opts[k] = ','.join([str(x) for x in v])
-            else:
-                extra_opts[k] = v
-
-    # print warnings
-    extra_strs = ['{}: {}'.format(k, v) for k, v in extra_opts.items()]
-    if extra_strs:
+    extra_opts = {
+        k: ','.join([str(x) for x in v]) if isinstance(v, list) else v
+        for k, v in curr_opt.items()
+        if k not in exempt_opts and k not in init_model_opt
+    }
+    if extra_strs := [f'{k}: {v}' for k, v in extra_opts.items()]:
         logging.warning(
-            'your model is being loaded with opts that do not '
-            'exist in the model you are initializing the weights with: '
-            '{}'.format(','.join(extra_strs))
+            f"your model is being loaded with opts that do not exist in the model you are initializing the weights with: {','.join(extra_strs)}"
         )
 
-    different_strs = [
-        '--{} {}'.format(k.replace('_', '-'), v) for k, v in different_opts.items()
-    ]
-    if different_strs:
+    if different_strs := [
+        f"--{k.replace('_', '-')} {v}" for k, v in different_opts.items()
+    ]:
         logging.warning(
-            'your model is being loaded with opts that differ '
-            'from the model you are initializing the weights with. Add the '
-            'following args to your run command to change this: \n'
-            '{}'.format(' '.join(different_strs))
+            f"your model is being loaded with opts that differ from the model you are initializing the weights with. Add the following args to your run command to change this: \n{' '.join(different_strs)}"
         )
 
 
@@ -359,7 +341,7 @@ def create_agent_from_opt_file(opt: Opt):
     If that file does not exist, return None.
     """
     model_file = opt['model_file']
-    optfile = model_file + '.opt'
+    optfile = f'{model_file}.opt'
 
     if not PathManager.exists(optfile):
         return None
@@ -401,18 +383,15 @@ def create_agent_from_opt_file(opt: Opt):
     # update dict file path
     if not opt_from_file.get('dict_file'):
         old_dict_file = None
-        opt_from_file['dict_file'] = model_file + '.dict'
+        opt_from_file['dict_file'] = f'{model_file}.dict'
     elif opt_from_file.get('dict_file') and not PathManager.exists(
         opt_from_file['dict_file']
     ):
         old_dict_file = opt_from_file['dict_file']
-        opt_from_file['dict_file'] = model_file + '.dict'
+        opt_from_file['dict_file'] = f'{model_file}.dict'
     if not PathManager.exists(opt_from_file['dict_file']):
         warn_once(
-            'WARNING: Neither the specified dict file ({}) nor the '
-            '`model_file`.dict file ({}) exists, check to make sure either '
-            'is correct. This may manifest as a shape mismatch later '
-            'on.'.format(old_dict_file, opt_from_file['dict_file'])
+            f"WARNING: Neither the specified dict file ({old_dict_file}) nor the `model_file`.dict file ({opt_from_file['dict_file']}) exists, check to make sure either is correct. This may manifest as a shape mismatch later on."
         )
 
     # if we want to load weights from --init-model, compare opts with
@@ -460,8 +439,7 @@ def create_agent(opt: Opt, requireModelExists=False):
         opt['model_file'] = modelzoo_path(opt.get('datapath'), opt['model_file'])
         if requireModelExists and not PathManager.exists(opt['model_file']):
             raise RuntimeError(
-                'WARNING: Model file does not exist, check to make '
-                'sure it is correct: {}'.format(opt['model_file'])
+                f"WARNING: Model file does not exist, check to make sure it is correct: {opt['model_file']}"
             )
         # Attempt to load the model from the model file first (this way we do
         # not even have to specify the model name as a parameter)
@@ -496,8 +474,7 @@ def create_agent_from_shared(shared_agent):
         whatever other parameters the agent needs to instantiate.
     """
     opt = copy.deepcopy(shared_agent['opt'])
-    a = shared_agent['class'](opt, shared_agent)
-    return a
+    return shared_agent['class'](opt, shared_agent)
 
 
 def create_agents_from_shared(shared):

@@ -134,12 +134,9 @@ class FastAcuteExecutor(object):
         else:
             models = set(self.fast_acute_args.models.split(','))
             combos = set(combinations(models, 2))
-        self.models: List[str] = list(models)
-        self.models.sort()
+        self.models: List[str] = sorted(models)
         self.combos: List[Tuple[str, str]] = []
-        for combo in combos:
-            # Sort the two model names for consistency
-            self.combos.append(tuple(sorted(combo)))
+        self.combos.extend(tuple(sorted(combo)) for combo in combos)
         # verify that models are contained in the config:
         for model in self.models:
             if model not in choices:
@@ -282,7 +279,7 @@ class FastAcuteExecutor(object):
                     conversation['context'].append(ex)
                     continue
                 if is_selfchat:
-                    speaker_id = model if i == speaker_idx else f'other_speaker'
+                    speaker_id = model if i == speaker_idx else 'other_speaker'
                 else:
                     speaker_id = ex['id']
                 if speaker_id not in conversation['speakers']:
@@ -407,7 +404,7 @@ class FastAcuteExecutor(object):
             )
             if not self.fast_acute_args.use_existing_self_chat_files:
                 answer = ''
-                while answer.lower().strip() != 'y' and answer.lower().strip() != 'o':
+                while answer.lower().strip() not in ['y', 'o']:
                     answer = input('Enter y to use, o to overwrite:')
                     if answer.lower().strip() == 'o':
                         self._build_pairings_file(pairings_filepath)
@@ -501,7 +498,7 @@ class FastAcuteExecutor(object):
             if val != self.fast_acute_args.get(key, None):
                 self.fast_acute_args[key] = val
                 overwritten_param_strings.append(f'\t{key}: {val}')
-        if len(overwritten_param_strings) > 0:
+        if overwritten_param_strings:
             overwritten_param_output = '\n'.join(overwritten_param_strings)
             self._print_progress(
                 f"The following ACUTE-Eval parameters will be overwritten to the following:\n"
@@ -516,10 +513,7 @@ class FastAcuteExecutor(object):
         """
         self._print_progress(f'Analyzing Results for run id {self.run_id}')
         parser = analysis_setup_args()
-        if args is not None:
-            arg_string = args.split()
-        else:
-            arg_string = []
+        arg_string = args.split() if args is not None else []
         opt = parser.parse_args(arg_string)
         today = datetime.date.today().isoformat()
         self.results_path = get_hashed_combo_path(

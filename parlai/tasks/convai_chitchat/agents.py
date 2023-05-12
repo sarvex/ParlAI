@@ -40,7 +40,7 @@ class DefaultTeacher(DialogTeacher):
     def _fold_utterances(raw_dialog):
         dialog = []
         for utterance in raw_dialog:
-            if len(dialog) > 0 and dialog[-1]['userId'] == utterance['userId']:
+            if dialog and dialog[-1]['userId'] == utterance['userId']:
                 dialog[-1]['text'] = dialog[-1]['text'] + '\n' + utterance['text']
             else:
                 dialog.append(
@@ -50,14 +50,12 @@ class DefaultTeacher(DialogTeacher):
 
     @staticmethod
     def _create_learning_examples(opponent_utterances, answer_utterances):
-        examples = [
-            u
-            for u in map(
+        return list(
+            map(
                 lambda pair: ((pair[0]['text'], [pair[1]['text']]), False),
                 zip(opponent_utterances, answer_utterances),
             )
-        ]
-        return examples
+        )
 
     @staticmethod
     def _data_generator(dialogs_dict):
@@ -71,27 +69,24 @@ class DefaultTeacher(DialogTeacher):
             u1_utterances = folded_dialog[::2]
             u2_utterances = folded_dialog[1::2]
 
-            it = [((context, ['']), True)] + DefaultTeacher._create_learning_examples(
+            yield from [
+                ((context, ['']), True)
+            ] + DefaultTeacher._create_learning_examples(
                 u1_utterances, u2_utterances
             )
-            for second_user_examples in it:
-                yield second_user_examples
-
-            if len(u1_utterances) > 1:
-                examples = [
-                    ((context, [u1_utterances[0]['text']]), True)
-                ] + DefaultTeacher._create_learning_examples(
-                    u2_utterances, u1_utterances[1:]
-                )
-            else:
-                examples = [((context, [u1_utterances[0]['text']]), True)]
-
-            for first_user_examples in examples:
-                yield first_user_examples
+            yield from [
+                ((context, [u1_utterances[0]['text']]), True)
+            ] + DefaultTeacher._create_learning_examples(
+                u2_utterances, u1_utterances[1:]
+            ) if len(
+                u1_utterances
+            ) > 1 else [
+                ((context, [u1_utterances[0]['text']]), True)
+            ]
 
     @staticmethod
     def setup_data(path):
-        print('loading: ' + path)
+        print(f'loading: {path}')
 
         if path is None:
             return iter(())

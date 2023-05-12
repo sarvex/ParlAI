@@ -30,9 +30,7 @@ class QADataCollectionWorld(CrowdTaskWorld):
 
     def parley(self):
 
-        act = {'episode_done': False}
-        act['id'] = self.__class__.collector_agent_id
-
+        act = {'episode_done': False, 'id': self.__class__.collector_agent_id}
         if not self.question:
             """
             First, the QA Collector agent provides the context and prompts the turker to

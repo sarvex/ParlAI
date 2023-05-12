@@ -99,10 +99,7 @@ class MultiProcessTrain(ParlaiScript):
         return argparser
 
     def run(self):
-        if self.opt['port'] is None:
-            port = None
-        else:
-            port = self.opt['port']
+        port = None if self.opt['port'] is None else self.opt['port']
         return launch_and_train(self.opt, port)
 
 

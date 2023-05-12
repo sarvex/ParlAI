@@ -28,4 +28,4 @@ def get_class(name):
     if name == 'simple':
         return SimpleTokenizer
 
-    raise RuntimeError('Invalid tokenizer: %s' % name)
+    raise RuntimeError(f'Invalid tokenizer: {name}')

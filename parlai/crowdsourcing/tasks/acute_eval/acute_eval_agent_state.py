@@ -34,7 +34,7 @@ class AcuteEvalAgentState(StaticAgentState):
         assert outputs is not None
         for idx in range(len(inputs)):
             entry: Dict[str, Any] = {}
-            entry.update(inputs[idx])
+            entry |= inputs[idx]
             entry.update(outputs["final_data"][idx])
             response_list.append(entry)
         return response_list

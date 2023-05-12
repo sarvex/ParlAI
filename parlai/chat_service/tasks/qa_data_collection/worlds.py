@@ -50,9 +50,7 @@ class QADataCollectionTaskWorld(World):
     def parley(self):
         # Each turn starts from the QA Collector agent
         self.turn_index = (self.turn_index + 1) % 2
-        ad = {'episode_done': False}
-        ad['id'] = self.__class__.collector_agent_id
-
+        ad = {'episode_done': False, 'id': self.__class__.collector_agent_id}
         if self.turn_index == 0:
             # At the first turn, the QA Collector agent provides the context
             # and prompts the person to ask a question regarding the context

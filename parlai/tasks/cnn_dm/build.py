@@ -71,7 +71,7 @@ def build(opt):
     version = None
 
     if not build_data.built(dpath, version_string=version):
-        print('[building data: ' + dpath + ']')
+        print(f'[building data: {dpath}]')
         if build_data.built(dpath):
             # An older version exists, so remove these outdated files.
             build_data.remove_dir(dpath)
@@ -85,24 +85,24 @@ def build(opt):
         for i, f in enumerate(RESOURCES[2:5]):
             dt = data_type[i]
             urls_fname = os.path.join(dpath, f.file_name)
-            split_fname = os.path.join(dpath, dt + '.txt')
-            with PathManager.open(urls_fname) as urls_file, PathManager.open(
-                split_fname, 'a'
-            ) as split_file:
+            split_fname = os.path.join(dpath, f'{dt}.txt')
+            with (PathManager.open(urls_fname) as urls_file, PathManager.open(
+                            split_fname, 'a'
+                        ) as split_file):
                 for url in urls_file:
                     file_name = hashlib.sha1(url.strip().encode('utf-8')).hexdigest()
-                    split_file.write("cnn/stories/{}.story\n".format(file_name))
+                    split_file.write(f"cnn/stories/{file_name}.story\n")
 
         for i, f in enumerate(RESOURCES[5:]):
             dt = data_type[i]
             urls_fname = os.path.join(dpath, f.file_name)
-            split_fname = os.path.join(dpath, dt + '.txt')
-            with PathManager.open(urls_fname) as urls_file, PathManager.open(
-                split_fname, 'a'
-            ) as split_file:
+            split_fname = os.path.join(dpath, f'{dt}.txt')
+            with (PathManager.open(urls_fname) as urls_file, PathManager.open(
+                            split_fname, 'a'
+                        ) as split_file):
                 for url in urls_file:
                     file_name = hashlib.sha1(url.strip().encode('utf-8')).hexdigest()
-                    split_file.write("dailymail/stories/{}.story\n".format(file_name))
+                    split_file.write(f"dailymail/stories/{file_name}.story\n")
 
         # Mark the data as built.
         build_data.mark_done(dpath, version_string=version)

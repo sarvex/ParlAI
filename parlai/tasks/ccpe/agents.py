@@ -31,7 +31,7 @@ class CCPEAllTeacher(FixedDialogTeacher):
         return len(self.data)
 
     def num_examples(self):
-        return sum([len(x) for x in self.data])
+        return sum(len(x) for x in self.data)
 
     def _setup_data(self):
 
@@ -81,38 +81,42 @@ class CCPEAllTeacher(FixedDialogTeacher):
         self.userData = []
         self.assistantData = []
 
-        for ep in range(len(flattenedData)):
+        for flattenedDatum in flattenedData:
             currUserEp = []
             currAssistantEp = []
 
             userCnt = 0
             asssistantCnt = 0
-            for i, currUtt in enumerate(flattenedData[ep]):
+            for i, currUtt in enumerate(flattenedDatum):
                 if i > 0:
                     if (
                         currUtt['speaker'] == 'USER'
-                        and flattenedData[ep][i - 1]['speaker'] == 'ASSISTANT'
+                        and flattenedDatum[i - 1]['speaker'] == 'ASSISTANT'
                     ):
-                        entry = []
-                        entry.append(userCnt)
-                        entry.append(currUtt['text'])
-                        entry.append([flattenedData[ep][i - 1]['text']])
-                        entry.append(currUtt['segments'])
-                        entry.append(flattenedData[ep][i - 1]['segments'])
-                        entry.append(False)
+                        entry = [
+                            userCnt,
+                            currUtt['text'],
+                            [flattenedDatum[i - 1]['text']],
+                            currUtt['segments'],
+                            flattenedDatum[i - 1]['segments'],
+                            False,
+                        ]
                         currUserEp.append(entry)
                         userCnt += 1
                     if (
                         currUtt['speaker'] == 'ASSISTANT'
-                        and flattenedData[ep][i - 1]['speaker'] == 'USER'
+                        and flattenedDatum[i - 1]['speaker'] == 'USER'
                     ):
-                        entry = []
-                        entry.append(asssistantCnt)
-                        entry.append(currUtt['text'])
-                        entry.append([flattenedData[ep][i - 1]['text']])
-                        entry.append(currUtt['segments'])
-                        entry.append(flattenedData[ep][i - 1]['segments'])
-                        entry.append(False)
+                        entry = [asssistantCnt]
+                        entry.extend(
+                            (
+                                currUtt['text'],
+                                [flattenedDatum[i - 1]['text']],
+                                currUtt['segments'],
+                                flattenedDatum[i - 1]['segments'],
+                                False,
+                            )
+                        )
                         currAssistantEp.append(entry)
                         asssistantCnt += 1
 
@@ -126,7 +130,7 @@ class CCPEAllTeacher(FixedDialogTeacher):
     def get(self, episode_idx, entry_idx=0):
         ep = self.data[episode_idx]
         entry = ep[entry_idx]
-        action = {
+        return {
             'id': entry[0],
             'text': entry[1],
             'labels': entry[2],
@@ -134,7 +138,6 @@ class CCPEAllTeacher(FixedDialogTeacher):
             'labelSegments': entry[4],
             'episode_done': entry[5],
         }
-        return action
 
     def share(self):
         shared = super().share()

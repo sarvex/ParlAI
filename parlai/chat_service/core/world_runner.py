@@ -55,7 +55,7 @@ class ChatServiceWorldRunner:
     def _log(self, text):
         if self.debug:
             time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print("{} DEBUG: {}".format(time, text))
+            print(f"{time} DEBUG: {text}")
 
     def is_initialized(self):
         return self.initialized

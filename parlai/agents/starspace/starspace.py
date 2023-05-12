@@ -229,9 +229,10 @@ class StarspaceAgent(Agent):
         self.fixedX = None
         if self.opt.get('fixed_candidates_file'):
             self.fixedCands_txt = load_cands(self.opt.get('fixed_candidates_file'))
-            fcs = []
-            for c in self.fixedCands_txt:
-                fcs.append(torch.LongTensor(self.parse(c)).unsqueeze(0))
+            fcs = [
+                torch.LongTensor(self.parse(c)).unsqueeze(0)
+                for c in self.fixedCands_txt
+            ]
             self.fixedCands = fcs
             logging.info("loaded candidates")
 
@@ -256,8 +257,7 @@ class StarspaceAgent(Agent):
                 weight.data[i] = vec
                 cnt += 1
         logging.info(
-            'Initialized embeddings for {} tokens ({}%) from {}.'
-            ''.format(cnt, round(cnt * 100 / len(self.dict), 1), name)
+            f'Initialized embeddings for {cnt} tokens ({round(cnt * 100 / len(self.dict), 1)}%) from {name}.'
         )
 
     def reset(self):
@@ -317,9 +317,7 @@ class StarspaceAgent(Agent):
         """
         Convert token indices to string of tokens.
         """
-        new_vec = []
-        for i in vec:
-            new_vec.append(i)
+        new_vec = list(vec)
         return self.dict.vec2txt(new_vec)
 
     def observe(self, observation):
@@ -340,9 +338,7 @@ class StarspaceAgent(Agent):
     def same(self, y1, y2):
         if len(y1.squeeze(0)) != len(y2.squeeze(0)):
             return False
-        if abs((y1.squeeze(0) - y2.squeeze(0)).sum().data.sum()) > 0.00001:
-            return False
-        return True
+        return abs((y1.squeeze(0) - y2.squeeze(0)).sum().data.sum()) <= 0.00001
 
     def get_negs(self, xs, ys):
         negs = []
@@ -365,15 +361,9 @@ class StarspaceAgent(Agent):
         return negs
 
     def compute_metrics(self, loss, scores):
-        metrics = {}
         pos = scores[0]
-        cnt = 0
-        for i in range(1, len(scores)):
-            if scores[i] >= pos:
-                cnt += 1
-        metrics['mean_rank'] = cnt
-        metrics['loss'] = loss
-        return metrics
+        cnt = sum(1 for i in range(1, len(scores)) if scores[i] >= pos)
+        return {'mean_rank': cnt, 'loss': loss}
 
     def input_dropout(self, xs, ys, negs):
         def dropout(x, rate):
@@ -381,7 +371,7 @@ class StarspaceAgent(Agent):
             for i in x[0]:
                 if random.uniform(0, 1) > rate:
                     xd.append(i)
-            if len(xd) == 0:
+            if not xd:
                 # pick one random thing to put in xd
                 xd.append(x[0][random.randint(0, x.size(1) - 1)])
             return torch.LongTensor(xd).unsqueeze(0)
@@ -404,7 +394,7 @@ class StarspaceAgent(Agent):
         is_training = ys is not None
         if is_training:
             negs = self.get_negs(xs, ys)
-            if is_training and len(negs) > 0:
+            if len(negs) > 0:
                 self.model.train()
                 self.optimizer.zero_grad()
                 if self.opt.get('input_dropout', 0) > 0:
@@ -421,12 +411,10 @@ class StarspaceAgent(Agent):
         else:
             self.model.eval()
             if cands is None or cands[0] is None:
-                # cannot predict without candidates.
-                if self.fixedCands:
-                    cands = [self.fixedCands]
-                    cands_txt = [self.fixedCands_txt]
-                else:
+                if not self.fixedCands:
                     return [{'text': 'I dunno.'}]
+                cands = [self.fixedCands]
+                cands_txt = [self.fixedCands_txt]
                 # test set prediction uses fixed candidates
                 if self.fixedX is None:
                     xe, ye = self.model(xs, ys, self.fixedCands)
@@ -445,11 +433,8 @@ class StarspaceAgent(Agent):
             val, ind = pred.sort(descending=True)
             # predict the highest scoring candidate, and return it.
             ypred = cands_txt[0][ind.data[0]]
-            tc = []
-            for i in range(min(100, ind.size(0))):
-                tc.append(cands_txt[0][ind.data[i]])
-            ret = [{'text': ypred, 'text_candidates': tc}]
-            return ret
+            tc = [cands_txt[0][ind.data[i]] for i in range(min(100, ind.size(0)))]
+            return [{'text': ypred, 'text_candidates': tc}]
         return [{'id': self.getID()}]
 
     def vectorize(self, observations):
@@ -480,9 +465,9 @@ class StarspaceAgent(Agent):
         valid_inds = [valid_inds[k] for k in ind_sorted]
         parsed_x = [parsed_x[k] for k in ind_sorted]
 
-        labels_avail = any(['labels' in ex for ex in exs])
+        labels_avail = any('labels' in ex for ex in exs)
 
-        max_x_len = max([len(x) for x in parsed_x])
+        max_x_len = max(len(x) for x in parsed_x)
         for x in parsed_x:
             x += [self.NULL_IDX] * (max_x_len - len(x))
         xs = torch.LongTensor(parsed_x)
@@ -553,19 +538,18 @@ class StarspaceAgent(Agent):
         """
         path = self.opt.get('model_file', None) if path is None else path
         if path and hasattr(self, 'model'):
-            data = {}
-            data['model'] = self.model.state_dict()
+            data = {'model': self.model.state_dict()}
             data['optimizer'] = self.optimizer.state_dict()
             data['opt'] = self.opt
             torch_utils.atomic_save(data, path)
-            with PathManager.open(path + '.opt', 'w') as handle:
+            with PathManager.open(f'{path}.opt', 'w') as handle:
                 json.dump(self.opt, handle)
 
     def load(self, path):
         """
         Return opt and model states.
         """
-        print('Loading existing model params from ' + path)
+        print(f'Loading existing model params from {path}')
         import parlai.utils.pickle
 
         with PathManager.open(path, 'rb') as f:

@@ -249,7 +249,7 @@ def build(opt):
     version = None
 
     if not build_data.built(dpath, version_string=version):
-        print('[building data: ' + dpath + ']')
+        print(f'[building data: {dpath}]')
 
         if build_data.built(dpath):
             # an older version exists, so remove these outdated files.
@@ -260,11 +260,11 @@ def build(opt):
         for downloadable_file in RESOURCES:
             downloadable_file.download_file(dpath)
             new_filename = downloadable_file.file_name[:-3]
-            print('[ unpacking data: ' + downloadable_file.file_name + ' ]')
-            f = open(dpath + '/' + new_filename, 'w')
-            for l in parse_gzip(dpath + '/' + downloadable_file.file_name):
+            print(f'[ unpacking data: {downloadable_file.file_name} ]')
+            f = open(f'{dpath}/{new_filename}', 'w')
+            for l in parse_gzip(f'{dpath}/{downloadable_file.file_name}'):
                 f.write(l + '\n')
-            PathManager.rm(dpath + '/' + downloadable_file.file_name)
+            PathManager.rm(f'{dpath}/{downloadable_file.file_name}')
 
         # mark the data as built
         build_data.mark_done(dpath, version_string=version)

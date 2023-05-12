@@ -33,8 +33,7 @@ def parse_configuration_file(config_path):
     :return:
         parsed configuration dictionary
     """
-    result = {}
-    result["configs"] = {}
+    result = {"configs": {}}
     with open(config_path) as f:
         cfg = yaml.load(f.read(), Loader=yaml.SafeLoader)
         # get world path
@@ -56,7 +55,7 @@ def parse_configuration_file(config_path):
         # get task file
         for task_name, configuration in task_world.items():
             if "task_world" not in configuration:
-                raise ValueError("{} does not specify a task".format(task_name))
+                raise ValueError(f"{task_name} does not specify a task")
             result["configs"][task_name] = WorldConfig(
                 world_name=task_name,
                 onboarding_name=configuration.get("onboard_world"),

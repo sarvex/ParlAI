@@ -70,7 +70,6 @@ class MockDict(Agent):
         """
         Add CLI args.
         """
-        pass
         return parser
 
     def txt2vec(self, txt):

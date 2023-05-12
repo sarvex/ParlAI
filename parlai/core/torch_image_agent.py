@@ -101,13 +101,6 @@ class TorchImageAgent(TorchAgent):
         if features.dim() == 4:
             features = features[0, :, 0, 0]
         assert features.size() == (self.image_features_dim,)
-        if self.use_cuda:
-            features = features.cuda()
-        else:
-            features = features.cpu()
-        if self.opt.get('fp16'):
-            features = features.half()
-        else:
-            features = features.float()
-
+        features = features.cuda() if self.use_cuda else features.cpu()
+        features = features.half() if self.opt.get('fp16') else features.float()
         return features

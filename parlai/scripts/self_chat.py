@@ -130,10 +130,10 @@ def self_chat(opt):
         agent2.opt.log("Agent 2 Opt")
 
     # Set IDs
-    agent1.id = agent1.id + "_1"
-    agent2.id = agent2.id + "_2"
+    agent1.id = f"{agent1.id}_1"
+    agent2.id = f"{agent2.id}_2"
 
-    model_id = agent1.id + "_" + agent2.id
+    model_id = f"{agent1.id}_{agent2.id}"
 
     world = create_task(opt, user_agents=[agent1, agent2])
 
@@ -150,7 +150,7 @@ def self_chat(opt):
 
     # Save chats
     if opt['outfile'] is None:
-        outfile = '/tmp/{}_selfchat'.format(model_id)
+        outfile = f'/tmp/{model_id}_selfchat'
     else:
         outfile = opt['outfile']
 

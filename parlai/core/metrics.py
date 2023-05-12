@@ -192,9 +192,7 @@ class Metric(ABC):
         return self.__radd__(other)
 
     def __radd__(self, other: Any):
-        if other is None:
-            return self
-        return self.__add__(other)
+        return self if other is None else self.__add__(other)
 
     def __str__(self) -> str:
         return f'{self.value():.4g}'
@@ -240,11 +238,8 @@ class Metric(ABC):
 
     @classmethod
     def as_number(cls, obj: TScalar) -> Union[int, float]:
-        if isinstance(obj, torch.Tensor):
-            obj_as_number: Union[int, float] = obj.item()
-        else:
-            obj_as_number = obj  # type: ignore
-        assert isinstance(obj_as_number, int) or isinstance(obj_as_number, float)
+        obj_as_number = obj.item() if isinstance(obj, torch.Tensor) else obj
+        assert isinstance(obj_as_number, (int, float))
         return obj_as_number
 
     @classmethod
@@ -364,9 +359,7 @@ class AverageMetric(Metric):
         if self._numer == 0 and self._denom == 0:
             # don't nan out if we haven't counted anything
             return 0.0
-        if self._denom == 0:
-            return float('nan')
-        return self._numer / self._denom
+        return float('nan') if self._denom == 0 else self._numer / self._denom
 
 
 class MacroAverageMetric(Metric):
@@ -831,7 +824,7 @@ def aggregate_named_reports(
     :return:
         The aggregated report
     """
-    if len(named_reports) == 0:
+    if not named_reports:
         raise ValueError("Cannot aggregate empty reports.")
     if len(named_reports) == 1:
         # no real aggregation to be done
@@ -883,13 +876,7 @@ class Metrics(object):
     """
 
     def __init__(self, threadsafe=False, shared=None):
-        if shared and 'data' in shared:
-            # This is a clone
-            self._data = shared['data']
-        else:
-            # The original
-            self._data = {}
-
+        self._data = shared['data'] if shared and 'data' in shared else {}
         # recent data is to track per-example metrics, and so should never be
         # shared
         self._recent_data = {}
@@ -988,11 +975,9 @@ class TeacherMetrics(Metrics):
         # Now loop through text candidates, assuming they are sorted.
         # If any of them is a label then score a point.
         # maintain hits@1, 5, 10, 50, 100,  etc.
-        label_set = set(normalize_answer(l) for l in labels)
+        label_set = {normalize_answer(l) for l in labels}
         cnts = {k: 0 for k in self.eval_pr}
-        cnt = 0
-        for c in text_cands:
-            cnt += 1
+        for cnt, c in enumerate(text_cands, start=1):
             if normalize_answer(c) in label_set:
                 for k in self.eval_pr:
                     if cnt <= k:
@@ -1045,14 +1030,15 @@ class TeacherMetrics(Metrics):
 
     def _consume_user_metrics(self, observation):
         # User-reported metrics
-        if 'metrics' in observation:
-            for uk, v in observation['metrics'].items():
-                if uk in ALL_METRICS:
-                    # don't let the user override our metrics
-                    uk = f'USER_{uk}'
-                assert isinstance(uk, str), f'{type(uk)} is not a str'
-                if not isinstance(v, Metric):
-                    warn_once(f'Metric {uk} is assumed to be averaged per example.')
-                    v = AverageMetric(v)
-                assert isinstance(v, Metric)
-                self.add(uk, v)
+        if 'metrics' not in observation:
+            return
+        for uk, v in observation['metrics'].items():
+            if uk in ALL_METRICS:
+                # don't let the user override our metrics
+                uk = f'USER_{uk}'
+            assert isinstance(uk, str), f'{type(uk)} is not a str'
+            if not isinstance(v, Metric):
+                warn_once(f'Metric {uk} is assumed to be averaged per example.')
+                v = AverageMetric(v)
+            assert isinstance(v, Metric)
+            self.add(uk, v)

@@ -174,8 +174,7 @@ class MyHandler(BaseHTTPRequestHandler):
     def _interactive_running(self, opt, reply_text):
         reply = {'episode_done': False, 'text': reply_text}
         SHARED['agent'].observe(reply)
-        model_res = SHARED['agent'].act()
-        return model_res
+        return SHARED['agent'].act()
 
     def do_HEAD(self):
         """
@@ -278,7 +277,7 @@ def interactive_web(opt):
     MyHandler.protocol_version = 'HTTP/1.0'
     httpd = HTTPServer((opt['host'], opt['port']), MyHandler)
     SHARED['server'] = httpd
-    logging.info('http://{}:{}/'.format(opt['host'], opt['port']))
+    logging.info(f"http://{opt['host']}:{opt['port']}/")
 
     try:
         SHARED['ready'] = True

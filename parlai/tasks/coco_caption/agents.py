@@ -41,30 +41,28 @@ QUESTION = "Describe the above picture in a sentence."
 
 
 def load_candidates(datapath, datatype, version):
-    if not datatype.startswith('train'):
-        suffix = 'captions_{}{}.json'
-        suffix_val = suffix.format('val', version)
-
-        val_path = os.path.join(
-            datapath, 'COCO_{}_Caption'.format(version), 'annotations', suffix_val
-        )
-        val = json.load(open(val_path))['annotations']
-        val_caps = [x['caption'] for x in val]
-        if datatype.startswith('test'):
-            suffix_train = suffix.format('train', version)
-            train_path = os.path.join(
-                datapath, 'COCO_{}_Caption'.format(version), 'annotations', suffix_train
-            )
-
-            train = json.load(open(train_path))['annotations']
-
-            train_caps = [x['caption'] for x in train]
-            test_caps = train_caps + val_caps
-            return test_caps
-        else:
-            return val_caps
-    else:
+    if datatype.startswith('train'):
         return None
+    suffix = 'captions_{}{}.json'
+    suffix_val = suffix.format('val', version)
+
+    val_path = os.path.join(
+        datapath, f'COCO_{version}_Caption', 'annotations', suffix_val
+    )
+    val = json.load(open(val_path))['annotations']
+    val_caps = [x['caption'] for x in val]
+    if datatype.startswith('test'):
+        suffix_train = suffix.format('train', version)
+        train_path = os.path.join(
+            datapath, f'COCO_{version}_Caption', 'annotations', suffix_train
+        )
+
+        train = json.load(open(train_path))['annotations']
+
+        train_caps = [x['caption'] for x in train]
+        return train_caps + val_caps
+    else:
+        return val_caps
 
 
 def _path(opt, version):
@@ -75,27 +73,26 @@ def _path(opt, version):
         build_2017(opt)
         buildImage_2017(opt)
     else:
-        raise Exception('Unknown version for COCO Captions: %s' % version)
+        raise Exception(f'Unknown version for COCO Captions: {version}')
 
     dt = opt['datatype'].split(':')[0]
 
     if dt == 'train':
-        annotation_suffix = 'train{}'.format(version)
+        annotation_suffix = f'train{version}'
         img_suffix = os.path.join(
-            'train{}'.format(version),
-            'COCO_train{}_'.format(version) if version == '2014' else '',
+            f'train{version}',
+            f'COCO_train{version}_' if version == '2014' else '',
         )
     elif dt == 'valid' or (dt == 'test' and version == '2014'):
-        annotation_suffix = 'val{}'.format(version)
+        annotation_suffix = f'val{version}'
         img_suffix = os.path.join(
-            'val{}'.format(version),
-            'COCO_val{}_'.format(version) if version == '2014' else '',
+            f'val{version}', f'COCO_val{version}_' if version == '2014' else ''
         )
     elif dt == 'test':
         annotation_suffix = 'None'
         img_suffix = os.path.join(
-            'test{}'.format(version),
-            'COCO_test{}_'.format(version) if version == '2014' else '',
+            f'test{version}',
+            f'COCO_test{version}_' if version == '2014' else '',
         )
     else:
         raise RuntimeError('Not valid datatype.')
@@ -112,7 +109,7 @@ def _path(opt, version):
             opt['datapath'],
             'COCO_2017_Caption',
             'annotations',
-            'captions_' + annotation_suffix + '.json',
+            f'captions_{annotation_suffix}.json',
         )
     else:
         test_info_path = None
@@ -120,9 +117,7 @@ def _path(opt, version):
             opt['datapath'], 'COCO_2014_Caption', 'dataset_coco.json'
         )
 
-    image_path = os.path.join(
-        opt['datapath'], 'COCO-IMG-{}'.format(version), img_suffix
-    )
+    image_path = os.path.join(opt['datapath'], f'COCO-IMG-{version}', img_suffix)
 
     return test_info_path, annotation_path, image_path
 
@@ -242,39 +237,38 @@ class DefaultTeacher(FixedDialogTeacher):
                     action['label_candidates'] = cands
                 else:
                     action['label_candidates'] = self.cands
-        else:
-            if not self.datatype.startswith('test'):
-                # test set annotations are not available for this dataset
-                anno = self.annotation[episode_idx]
-                action['labels'] = [anno['caption']]
-                action['image_id'] = anno['image_id']
-                if not self.datatype.startswith('train'):
-                    if self.num_cands == -1:
-                        candidates = self.cands
-                    else:
-                        # Can only randomly select from validation set
-                        candidates = random.Random(episode_idx).choices(
-                            self.cands, k=self.num_cands
-                        )
-                    if anno['caption'] not in candidates:
-                        candidates.pop(0)
-                    else:
-                        candidates.remove(anno['caption'])
-
-                    candidate_labels = [anno['caption']]
-                    candidate_labels += candidates
-                    action['label_candidates'] = candidate_labels
+        elif self.datatype.startswith('test'):
+            if self.num_cands == -1:
+                candidates = self.cands
             else:
-                if self.num_cands == -1:
-                    candidates = self.cands
-                else:
-                    # Can only randomly select from validation set
-                    candidates = random.Random(episode_idx).choices(
+                # Can only randomly select from validation set
+                candidates = random.Random(episode_idx).choices(
+                    self.cands, k=self.num_cands
+                )
+            action['label_candidates'] = candidates
+            action['image_id'] = self.test_info['images'][episode_idx]['id']
+
+        else:
+            # test set annotations are not available for this dataset
+            anno = self.annotation[episode_idx]
+            action['labels'] = [anno['caption']]
+            action['image_id'] = anno['image_id']
+            if not self.datatype.startswith('train'):
+                candidates = (
+                    self.cands
+                    if self.num_cands == -1
+                    else random.Random(episode_idx).choices(
                         self.cands, k=self.num_cands
                     )
-                action['label_candidates'] = candidates
-                action['image_id'] = self.test_info['images'][episode_idx]['id']
+                )
+                if anno['caption'] not in candidates:
+                    candidates.pop(0)
+                else:
+                    candidates.remove(anno['caption'])
 
+                candidate_labels = [anno['caption']]
+                candidate_labels += candidates
+                action['label_candidates'] = candidate_labels
         return action
 
     def next_example(self):
@@ -298,10 +292,7 @@ class DefaultTeacher(FixedDialogTeacher):
             split = self.example.get('split', None)
             self.submit_load_request(image_id, split)
         # Try to return the previously cached example
-        if ready is None:
-            return self.next_example()
-        else:
-            return ready
+        return self.next_example() if ready is None else ready
 
     def share(self):
         shared = super().share()
@@ -340,11 +331,11 @@ class DefaultTeacher(FixedDialogTeacher):
                 ]
         else:
             if not self.datatype.startswith('test'):
-                print('loading: ' + annotation_path)
+                print(f'loading: {annotation_path}')
                 with PathManager.open(annotation_path) as data_file:
                     self.annotation = json.load(data_file)['annotations']
             else:
-                print('loading: ' + test_info_path)
+                print(f'loading: {test_info_path}')
                 with PathManager.open(test_info_path) as data_file:
                     self.test_info = json.load(data_file)
             if not self.datatype.startswith('train'):

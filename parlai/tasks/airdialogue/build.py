@@ -23,7 +23,7 @@ def build(opt):
     version = '1.0'
 
     if not build_data.built(airdialogue_path, version_string=version):
-        print('[building data: ' + airdialogue_path + ']')
+        print(f'[building data: {airdialogue_path}]')
         if build_data.built(airdialogue_path):
             build_data.remove_dir(airdialogue_path)
 

@@ -184,27 +184,23 @@ class AcuteAnalyzer(object):
             response['correct'] = -1
 
         speakers_to_eval = sorted(task_data["pairing_dict"]["speakers_to_eval"])
-        response.update(
-            {
-                'winner': choice,
-                'loser': speakers_to_eval[1 - (speakers_to_eval.index(choice))],
-                'eval_choice_0': speakers_to_eval[0],
-                'eval_choice_1': speakers_to_eval[1],
-                'reason': task_data['textReason'],
-                'is_onboarding': onboarding,
-                'matchup': f"{'__vs__'.join(speakers_to_eval)}",
-                'pairing_id': task_data['pair_id'],
-            }
-        )
+        response |= {
+            'winner': choice,
+            'loser': speakers_to_eval[1 - (speakers_to_eval.index(choice))],
+            'eval_choice_0': speakers_to_eval[0],
+            'eval_choice_1': speakers_to_eval[1],
+            'reason': task_data['textReason'],
+            'is_onboarding': onboarding,
+            'matchup': f"{'__vs__'.join(speakers_to_eval)}",
+            'pairing_id': task_data['pair_id'],
+        }
 
         # If it exists, add in which checkboxes of possible reasons the Turkers checked
         if len(task_data.get('speakerReasons', {})) > 0:
-            response.update(
-                {
-                    self.checkbox_prefix + reason: checked
-                    for reason, checked in task_data['speakerReasons'].items()
-                }
-            )
+            response |= {
+                self.checkbox_prefix + reason: checked
+                for reason, checked in task_data['speakerReasons'].items()
+            }
         return response
 
     def _parse_unit(self, unit: MephistoUnit) -> Optional[Dict[str, Any]]:
@@ -243,7 +239,7 @@ class AcuteAnalyzer(object):
                 if response is not None:
                     responses.append(response)
 
-        if len(responses) == 0:
+        if not responses:
             raise ValueError('No valid results found!')
         else:
             return pd.DataFrame(responses)
@@ -353,10 +349,8 @@ class AcuteAnalyzer(object):
             models.add(model1)
             models.add(model2)
             combos.add(tuple(sorted((model1, model2))))
-        self.models = list(models)
-        self.models.sort()
-        self.combos = list(combos)
-        self.combos.sort()
+        self.models = sorted(models)
+        self.combos = sorted(combos)
 
     def get_reasons(self) -> List[str]:
         """
@@ -618,21 +612,17 @@ REASON: {pairing_sr['reason']}
         # Save raw dataframe
         self.dataframe.to_csv(f'{path}/{self.run_id}.full.csv', index=False)
 
-        with open('{}/{}.significance.csv'.format(path, self.run_id), 'w') as f:
+        with open(f'{path}/{self.run_id}.significance.csv', 'w') as f:
             f.write(self.significance_df.to_csv(index=False))
         print(
-            'To visualize significance result, try cat {} | column -t -s, | less -S'.format(
-                '{}/{}.significance.csv'.format(path, self.run_id)
-            )
+            f'To visualize significance result, try cat {path}/{self.run_id}.significance.csv | column -t -s, | less -S'
         )
-        with open('{}/{}.grid.csv'.format(path, self.run_id), 'w') as f:
+        with open(f'{path}/{self.run_id}.grid.csv', 'w') as f:
             f.write(self.get_win_fractions().to_csv(index=True))
         with open(f'{path}/{self.run_id}.grid.winners_as_rows.csv', 'w') as f:
             f.write(self.get_win_fractions().transpose().to_csv(index=True))
         print(
-            'To visualize grid result, try cat {} | column -t -s, | less -S'.format(
-                '{}/{}.grid.csv'.format(path, self.run_id)
-            )
+            f'To visualize grid result, try cat {path}/{self.run_id}.grid.csv | column -t -s, | less -S'
         )
 
         # Save stats on how many ratings each worker did
@@ -656,21 +646,15 @@ REASON: {pairing_sr['reason']}
 
         else:
 
-            with open('{}/{}.reason.html'.format(path, self.run_id), 'w') as f:
+            with open(f'{path}/{self.run_id}.reason.html', 'w') as f:
                 f.write(render_conversations_per_matchups(self.dataframe, True).data)
             print(
-                'To visualize conversations with reasons only result, '
-                'try scp username@devfair:{} to your local machine'.format(
-                    ' {}/{}.reason.html'.format(path, self.run_id)
-                )
+                f'To visualize conversations with reasons only result, try scp username@devfair: {path}/{self.run_id}.reason.html to your local machine'
             )
-            with open('{}/{}.all.html'.format(path, self.run_id), 'w') as f:
+            with open(f'{path}/{self.run_id}.all.html', 'w') as f:
                 f.write(render_conversations_per_matchups(self.dataframe, False).data)
             print(
-                'To visualize conversations result, try scp username@devfair:{}'
-                ' to your local machine'.format(
-                    '{}/{}.all.html'.format(path, self.run_id)
-                )
+                f'To visualize conversations result, try scp username@devfair:{path}/{self.run_id}.all.html to your local machine'
             )
 
             # Write all pairs of dialogues, as well as the Turkers' choices and reasons, as
@@ -748,7 +732,7 @@ def render_row(row):
     for i, turn in enumerate(row['winner_dialogue']['dialogue']):
         speakername = turn['id']
         text = turn['text']
-        is_bot = (speakername != 'human_evaluator') and (speakername != 'other_speaker')
+        is_bot = speakername not in ['human_evaluator', 'other_speaker']
         if i > 2 and is_bot:
             speakername = 'bot'
         align = 'right' if is_bot else 'left'
@@ -756,13 +740,7 @@ def render_row(row):
         bgcolor = '#2391f7' if is_bot else '#e1e1e7'
 
         result.append(
-            (
-                '<div style="overflow: auto; padding: 1ex 0;">'
-                '<div style="clear: both; float: {}; color: {}; background-color: {}; padding: 0.5em 1em; border-radius: 1em; max-width: 80%">'
-                '<p style="margin: 0">{}: {}</p>'
-                '</div>'
-                '</div>'
-            ).format(align, color, bgcolor, speakername, text)
+            f'<div style="overflow: auto; padding: 1ex 0;"><div style="clear: both; float: {align}; color: {color}; background-color: {bgcolor}; padding: 0.5em 1em; border-radius: 1em; max-width: 80%"><p style="margin: 0">{speakername}: {text}</p></div></div>'
         )
     winner_dialogue = (
         '<div style="background-color: white; margin: 0em; padding: 0.5em; '
@@ -773,7 +751,7 @@ def render_row(row):
     result = []
     for i, turn in enumerate(row['loser_dialogue']['dialogue']):
         speakername = turn['id']
-        is_bot = (speakername != 'human_evaluator') and (speakername != 'other_speaker')
+        is_bot = speakername not in ['human_evaluator', 'other_speaker']
         if i > 2 and is_bot:
             speakername = 'bot'
         text = turn['text']
@@ -783,13 +761,7 @@ def render_row(row):
         bgcolor = '#2391f7' if is_bot else '#e1e1e7'
 
         result.append(
-            (
-                '<div style="overflow: auto; padding: 1ex 0;">'
-                '<div style="clear: both; float: {}; color: {}; background-color: {}; padding: 0.5em 1em; border-radius: 1em; max-width: 80%">'
-                '<p style="margin: 0">{}: {}</p>'
-                '</div>'
-                '</div>'
-            ).format(align, color, bgcolor, speakername, text)
+            f'<div style="overflow: auto; padding: 1ex 0;"><div style="clear: both; float: {align}; color: {color}; background-color: {bgcolor}; padding: 0.5em 1em; border-radius: 1em; max-width: 80%"><p style="margin: 0">{speakername}: {text}</p></div></div>'
         )
     loser_dialogue = (
         '<div style="background-color: white; margin: 0em; padding: 0.5em; '
@@ -799,17 +771,13 @@ def render_row(row):
     )
 
     return HTML(
-        '<tr><td>{}</td><td>{}</td><td>{}</td></tr>'.format(
-            winner_dialogue, loser_dialogue, row['reason']
-        )
+        f"<tr><td>{winner_dialogue}</td><td>{loser_dialogue}</td><td>{row['reason']}</td></tr>"
     )
 
 
 def render_many_conversations(table):
     return HTML(
-        '<table><tr><th>Winner Conversation</th><th>Loser Conversation</th><th>Reason</th></tr>{}</table>'.format(
-            ''.join(render_row(row).data for i, row in table.iterrows())
-        )
+        f"<table><tr><th>Winner Conversation</th><th>Loser Conversation</th><th>Reason</th></tr>{''.join(render_row(row).data for i, row in table.iterrows())}</table>"
     )
 
 
@@ -820,10 +788,7 @@ def render_conversations_per_matchups(table, force_reasons=True):
         table = table[table['reason'] != '']
     for matchup in matchups:
         length = min(10, len(table[table['matchup'] == matchup]))
-        result += '<h2>{}</h2><body>{}</body>'.format(
-            matchup,
-            render_many_conversations(table[table['matchup'] == matchup][:length]).data,
-        )
+        result += f"<h2>{matchup}</h2><body>{render_many_conversations(table[table['matchup'] == matchup][:length]).data}</body>"
     return HTML(result)
 
 

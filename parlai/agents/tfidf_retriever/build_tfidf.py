@@ -62,8 +62,7 @@ def truncate(data, row, col):
         over = len(data) - MAX_SZ
         pct = over / len(data)
         logging.info(
-            'Data size is too large for scipy to index all of it. '
-            'Throwing out {} entries ({}%% of data).'.format(over, pct)
+            f'Data size is too large for scipy to index all of it. Throwing out {over} entries ({pct}%% of data).'
         )
         data = data[:MAX_SZ]
         row = row[:MAX_SZ]
@@ -121,7 +120,7 @@ def get_count_matrix(args, db_opts):
     # Compute the count matrix in steps (to keep in memory)
     logging.info('Mapping...')
     row, col, data = [], [], []
-    step = max(int(len(doc_ids) / 10), 1)
+    step = max(len(doc_ids) // 10, 1)
     batches = [doc_ids[i : i + step] for i in range(0, len(doc_ids), step)]
     _count = partial(count, args.ngram, args.hash_size)
     for i, batch in enumerate(batches):
@@ -169,9 +168,7 @@ def get_tfidf_matrix(cnts):
     idfs[idfs < 0] = 0
     idfs = sp.diags(idfs, 0)
     tfs = cnts.log1p()
-    tfidfs = idfs.dot(tfs)
-
-    return tfidfs
+    return idfs.dot(tfs)
 
 
 def get_doc_freqs(cnts):
@@ -179,8 +176,7 @@ def get_doc_freqs(cnts):
     Return word --> # of docs it appears in.
     """
     binary = (cnts > 0).astype(int)
-    freqs = np.array(binary.sum(1)).squeeze()
-    return freqs
+    return np.array(binary.sum(1)).squeeze()
 
 
 # ------------------------------------------------------------------------------
@@ -201,7 +197,7 @@ def run(args):
 
     filename = args.out_dir
 
-    logging.info('Saving to %s' % filename)
+    logging.info(f'Saving to {filename}')
     metadata = {
         'doc_freqs': freqs,
         'tokenizer': args.tokenizer,

@@ -108,21 +108,22 @@ class AcuteEvalBlueprint(Blueprint):
         Ensure that the data can be properly loaded and that recommended worker settings
         are used.
         """
-        if args.blueprint.get("pairings_filepath", None) is not None:
-            pairings_filepath = os.path.expanduser(args.blueprint.pairings_filepath)
-            assert os.path.exists(
-                pairings_filepath
-            ), f"Provided file {pairings_filepath} doesn't exist"
-        else:
+        if args.blueprint.get("pairings_filepath", None) is None:
             raise AssertionError(
                 "Must provide one of a data csv, json, or a list of tasks"
             )
 
-        if args.blueprint.block_on_onboarding_fail is True:
-            if args.blueprint.get("block_qualification", None) is None:
-                raise AssertionError(
-                    "Must provide `block_qualification` to use `block_on_onboarding_fail`"
-                )
+        pairings_filepath = os.path.expanduser(args.blueprint.pairings_filepath)
+        assert os.path.exists(
+            pairings_filepath
+        ), f"Provided file {pairings_filepath} doesn't exist"
+        if (
+            args.blueprint.block_on_onboarding_fail is True
+            and args.blueprint.get("block_qualification", None) is None
+        ):
+            raise AssertionError(
+                "Must provide `block_qualification` to use `block_on_onboarding_fail`"
+            )
 
         if args.task.get('maximum_units_per_worker', None) != 1:
             warn_once(

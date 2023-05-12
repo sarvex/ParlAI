@@ -116,9 +116,7 @@ class ChatServiceAgent(Agent, ABC):
         """
         Get a new act message if one exists, return None otherwise.
         """
-        if not self.msg_queue.empty():
-            return self.msg_queue.get()
-        return None
+        return self.msg_queue.get() if not self.msg_queue.empty() else None
 
     def act(self):
         """
@@ -126,16 +124,13 @@ class ChatServiceAgent(Agent, ABC):
 
         If none exist returns None.
         """
-        msg = self.get_new_act_message()
-        return msg
+        return self.get_new_act_message()
 
     def _check_timeout(self, timeout=None):
         """
         Return whether enough time has passed than the timeout amount.
         """
-        if timeout:
-            return time.time() - self.message_request_time > timeout
-        return False
+        return time.time() - self.message_request_time > timeout if timeout else False
 
     def act_blocking(self, timeout=None):
         """

@@ -13,21 +13,21 @@ for task_dict in task_list:
     display_name = task_dict.get('display_name', None)
     task_detailed = task_dict.get('task', None)
     if ':' in task_detailed:
-        task = task_detailed[0 : task_detailed.find(':')]
+        task = task_detailed[:task_detailed.find(':')]
     else:
         task = task_detailed
     tags = task_dict.get('tags', None)
     description = task_dict.get('description', None)
     notes = task_dict.get('notes', None)
 
-    str = "Task: " + display_name + '\n'
+    str = f"Task: {display_name}" + '\n'
     str += '=' * len(str)
     description = description.replace('Link: http', '\n\nLink: http')
     str += "\nDescription: " + description + "\n\n"
-    str += "Tags: #" + id + ", "
+    str += f"Tags: #{id}, "
     tag_list_string = ''
     for i in range(len(tags)):
-        tag_list_string += '#' + tags[i] + ''
+        tag_list_string += f'#{tags[i]}'
         if i < len(tags) - 1:
             tag_list_string += ', '
     str += tag_list_string + '\n'
@@ -39,8 +39,7 @@ for task_dict in task_list:
     else:
         tasks[task] += '\n\n' + str
 
-for t in tasks.keys():
+for t, value in tasks.items():
     path = os.path.join("../../parlai/tasks/", t, 'README.md')
-    fout = open(path, 'w')
-    fout.write(tasks[t])
-    fout.close()
+    with open(path, 'w') as fout:
+        fout.write(value)

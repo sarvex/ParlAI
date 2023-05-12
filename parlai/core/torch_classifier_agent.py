@@ -164,10 +164,9 @@ class ClassificationF1Metric(ConfusionMatrixMetric):
     def value(self) -> float:
         if self._true_positives == 0:
             return 0.0
-        else:
-            numer = 2 * self._true_positives
-            denom = numer + self._false_negatives + self._false_positives
-            return numer / denom
+        numer = 2 * self._true_positives
+        denom = numer + self._false_negatives + self._false_positives
+        return numer / denom
 
 
 class AUCMetrics(Metric):
@@ -298,16 +297,8 @@ class AUCMetrics(Metric):
         _tot_neg = sum(self._neg_dict.values())
         fp_tp = self._calc_fp_tp()
         fps, tps = list(zip(*fp_tp))
-        if _tot_neg == 0:
-            fpr = [0] * len(fps)
-        else:
-            fpr = [fp / _tot_neg for fp in fps]
-
-        if _tot_pos == 0:
-            tpr = [0] * len(tps)
-        else:
-            tpr = [tp / _tot_pos for tp in tps]
-
+        fpr = [0] * len(fps) if _tot_neg == 0 else [fp / _tot_neg for fp in fps]
+        tpr = [0] * len(tps) if _tot_pos == 0 else [tp / _tot_pos for tp in tps]
         return (list(zip(fpr, tpr)), _tot_pos, _tot_neg)
 
     def value(self) -> float:
@@ -351,10 +342,10 @@ class WeightedF1Metric(Metric):
     def value(self) -> float:
         weighted_f1 = 0.0
         values = list(self._values.values())
-        if len(values) == 0:
+        if not values:
             return weighted_f1
         total_examples = sum(
-            [each._true_positives + each._false_negatives for each in values]
+            each._true_positives + each._false_negatives for each in values
         )
         for each in values:
             actual_positive = each._true_positives + each._false_negatives
@@ -472,7 +463,7 @@ class TorchClassifierAgent(TorchAgent):
             if opt.get('class_weights', None) is not None:
                 self.class_weights = opt['class_weights']
             else:
-                self.class_weights = [1.0 for c in self.class_list]
+                self.class_weights = [1.0 for _ in self.class_list]
             self.reset_metrics()
         else:
             self.class_list = shared['class_list']
@@ -627,9 +618,7 @@ class TorchClassifierAgent(TorchAgent):
         for i, pred_id in enumerate(prediction_id.tolist()):
             prob = round_sigfigs(probs[i][pred_id], 4)
             preds.append(
-                'Predicted class: {}\nwith probability: {}'.format(
-                    self.class_list[pred_id], prob
-                )
+                f'Predicted class: {self.class_list[pred_id]}\nwith probability: {prob}'
             )
         return preds
 

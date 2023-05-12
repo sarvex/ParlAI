@@ -134,10 +134,8 @@ class TurnAnnotationsStaticResultsCompiler(AbstractTurnAnnotationResultsCompiler
         # agents 0 and 1, with 0 speaking first
         try:
             assert all(
-                [
-                    utterance_data['agent_idx'] == turn_idx % 2
-                    for turn_idx, utterance_data in enumerate(subtask_data)
-                ]
+                utterance_data['agent_idx'] == turn_idx % 2
+                for turn_idx, utterance_data in enumerate(subtask_data)
             )
             messages_0 = [utt for utt in subtask_data if utt['agent_idx'] == 0]
             messages_1 = [utt for utt in subtask_data if utt['agent_idx'] == 1]
@@ -145,17 +143,20 @@ class TurnAnnotationsStaticResultsCompiler(AbstractTurnAnnotationResultsCompiler
         except Exception:
             return False, f'Data not in form expected. Length is: {len(subtask_data)}'
 
-        for utterance_data in subtask_data:
-            if (
-                utterance_data['agent_idx'] == 1
-                and self.problem_buckets[0] not in utterance_data
-            ):
-                return (
+        return next(
+            (
+                (
                     False,
                     f'Bot utterance was malformed and had no problem annotation fields (Failed to find key: {self.problem_buckets[0]}).',
                 )
-
-        return True, None
+                for utterance_data in subtask_data
+                if (
+                    utterance_data['agent_idx'] == 1
+                    and self.problem_buckets[0] not in utterance_data
+                )
+            ),
+            (True, None),
+        )
 
     def _get_inflight_onboarding_success_from_subtask(self, subtask):
         if self.INFLIGHT_ONBOARDING_DATA is None:
@@ -245,19 +246,19 @@ class TurnAnnotationsStaticResultsCompiler(AbstractTurnAnnotationResultsCompiler
                 subtask_data['folder'] = dp
                 subtask_data['subtask_idx'] = subtask_idx
                 experimental_design = 'self_chat'
-                subtask_data['model_nickname'] = experimental_design + '/' + 'TODO'
+                subtask_data['model_nickname'] = f'{experimental_design}/TODO'
                 subtask_data['qc_success_pct'] = qc_success_pct
                 conversations.append(subtask_data)
 
             task_completion_times.append(task_completion_time_seconds)
 
-        if len(task_completion_times) > 0:
+        if task_completion_times:
             print(
                 f'Average task completion time (seconds) was: '
                 f'{np.average(task_completion_times):0.1f}'
             )
 
-        if len(conversations) == 0:
+        if not conversations:
             raise ValueError('No conversations found!')
 
         return conversations
@@ -269,7 +270,7 @@ class TurnAnnotationsStaticResultsCompiler(AbstractTurnAnnotationResultsCompiler
         """
         print('Starting process_data_into_dataframe...')
         rows = []
-        for _, convo in enumerate(conversations):
+        for convo in conversations:
             for turn_idx, utt in enumerate(convo['data']):
                 row = {
                     'annotation_id': f'{convo["hit_id"]}_{convo["subtask_idx"]}_{turn_idx}_{convo["worker_id"]}',
@@ -505,24 +506,21 @@ class TurnAnnotationsStaticResultsCompiler(AbstractTurnAnnotationResultsCompiler
                 P_bar_sum_term += n_ij ** 2
 
         p_j = [tmp / (N * number_of_raters) for tmp in p_j]
-        P_e_bar = sum([tmp ** 2 for tmp in p_j])
+        P_e_bar = sum(tmp ** 2 for tmp in p_j)
 
         P_bar = (P_bar_sum_term - N * number_of_raters) / (
             N * number_of_raters * (number_of_raters - 1)
         )
 
-        kappa = (P_bar - P_e_bar) / (1 - P_e_bar)
-        return kappa
+        return (P_bar - P_e_bar) / (1 - P_e_bar)
 
     def setup_inflight_onboarding_data(self):
         print('setup_inflight_onboarding_data')
         raw_qc_convos = []
         with open(self.onboarding_in_flight_data_file, "r") as f:
-            line = f.readline()
-            while line:
+            while line := f.readline():
                 qc_convo = json.loads(line)
                 raw_qc_convos.append(qc_convo)
-                line = f.readline()
         return raw_qc_convos
 
 

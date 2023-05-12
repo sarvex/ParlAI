@@ -128,7 +128,7 @@ class TransformerDecoderLayer(nn.Module):
         )[:2]
         x = self.dropout(x)  # --dropout
         x = x + residual
-        if self.variant == 'aiayn' or self.variant == 'xlm' or self.variant == 'bart':
+        if self.variant in ['aiayn', 'xlm', 'bart']:
             x = self.norm1(x)
 
         residual = x
@@ -146,7 +146,7 @@ class TransformerDecoderLayer(nn.Module):
         )[:2]
         x = self.dropout(x)  # --dropout
         x = residual + x
-        if self.variant == 'aiayn' or self.variant == 'xlm' or self.variant == 'bart':
+        if self.variant in ['aiayn', 'xlm', 'bart']:
             x = self.norm2(x)
 
         # finally the ffn
@@ -156,7 +156,7 @@ class TransformerDecoderLayer(nn.Module):
         x = self.ffn(x, **kwargs)
         x = self.dropout(x)  # --dropout
         x = residual + x
-        if self.variant == 'aiayn' or self.variant == 'xlm' or self.variant == 'bart':
+        if self.variant in ['aiayn', 'xlm', 'bart']:
             x = self.norm3(x)
 
         new_incr_state = {
@@ -243,11 +243,7 @@ class TransformerDecoder(nn.Module):
 
         self.embeddings = embedding
 
-        if (
-            self.variant == 'xlm'
-            or self.variant == 'prelayernorm'
-            or self.variant == 'bart'
-        ):
+        if self.variant in ['xlm', 'prelayernorm', 'bart']:
             self.norm_embeddings = torch.nn.LayerNorm(self.dim, eps=LAYER_NORM_EPS)
             if self.variant == 'xlm':
                 warn_once(

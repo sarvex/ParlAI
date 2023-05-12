@@ -173,8 +173,7 @@ class HFGPT2Model(TorchGeneratorModel):
         return dict.null_idx, dict.start_idx, dict.end_idx
 
     def reorder_encoder_states(self, encoder_states, indices):
-        enc = torch.index_select(encoder_states, 0, indices)
-        return enc
+        return torch.index_select(encoder_states, 0, indices)
 
     def output(self, tensor):
         """
@@ -185,14 +184,11 @@ class HFGPT2Model(TorchGeneratorModel):
     def reorder_decoder_incremental_state(self, incremental_state, inds):
         new_incr_state = []
         for layer_past in incremental_state:
-            if torch.is_tensor(layer_past):
-                new_incr_state.append(torch.index_select(layer_past, 1, inds))
-            else:
+            if not torch.is_tensor(layer_past):
                 # newer versions of HF split up the intermediate outputs
                 assert isinstance(layer_past, tuple)
                 layer_past = torch.stack(layer_past, dim=0)
-                new_incr_state.append(torch.index_select(layer_past, 1, inds))
-
+            new_incr_state.append(torch.index_select(layer_past, 1, inds))
         return tuple(new_incr_state)
 
     def decode_forced(self, encoder_states, ys):

@@ -117,8 +117,7 @@ def build_dict(opt, skip_if_built=False):
         if opt['dict_maxexs'] >= 0:
             total = min(total, opt['dict_maxexs'])
 
-        log_every_n_secs = opt.get('log_every_n_secs', None)
-        if log_every_n_secs:
+        if log_every_n_secs := opt.get('log_every_n_secs', None):
             pbar = tqdm.tqdm(
                 total=total, desc='Building dictionary', unit='ex', unit_scale=True
             )
@@ -126,8 +125,8 @@ def build_dict(opt, skip_if_built=False):
             pbar = None
         while not world_dict.epoch_done():
             cnt += 1
-            if cnt > opt['dict_maxexs'] and opt['dict_maxexs'] >= 0:
-                logging.info('Processed {} exs, moving on.'.format(opt['dict_maxexs']))
+            if cnt > opt['dict_maxexs'] >= 0:
+                logging.info(f"Processed {opt['dict_maxexs']} exs, moving on.")
                 # don't wait too long...
                 break
             world_dict.parley()

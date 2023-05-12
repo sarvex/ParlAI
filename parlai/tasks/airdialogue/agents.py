@@ -16,9 +16,7 @@ def _path(opt):
     # build the data if it does not exist
     build(opt)
 
-    # set up path to data (specific to each dataset)
-    jsons_path = os.path.join(opt['datapath'], 'airdialogue_data', 'airdialogue')
-    return jsons_path
+    return os.path.join(opt['datapath'], 'airdialogue_data', 'airdialogue')
 
 
 class AirDialogueTeacher(FixedDialogTeacher):
@@ -68,10 +66,7 @@ class AirDialogueTeacher(FixedDialogTeacher):
         return shared
 
     def num_examples(self):
-        examples = 0
-        for data in self.messages:
-            examples += len(data) // 2
-        return examples
+        return sum(len(data) // 2 for data in self.messages)
 
     def num_episodes(self):
         return len(self.messages)

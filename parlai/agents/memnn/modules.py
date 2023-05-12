@@ -14,11 +14,11 @@ def opt_to_kwargs(opt):
     """
     Get kwargs for seq2seq from opt.
     """
-    kwargs = {}
-    for k in ['memsize', 'time_features', 'position_encoding', 'hops']:
-        if k in opt:
-            kwargs[k] = opt[k]
-    return kwargs
+    return {
+        k: opt[k]
+        for k in ['memsize', 'time_features', 'position_encoding', 'hops']
+        if k in opt
+    }
 
 
 class MemNN(nn.Module):
@@ -142,9 +142,7 @@ class Embed(nn.Embedding):
             )
             return sum / lens
         else:
-            raise RuntimeError(
-                'reduction method {} not supported'.format(self.reduction)
-            )
+            raise RuntimeError(f'reduction method {self.reduction} not supported')
 
     def forward(self, input):
         """
@@ -244,5 +242,4 @@ class Hop(nn.Module):
             attn[pad_mask] = neginf(attn.dtype)
         probs = self.softmax(attn)
         memory_output = torch.bmm(probs.unsqueeze(1), out_mem_embs).squeeze(1)
-        output = memory_output + self.rotate(query_embs)
-        return output
+        return memory_output + self.rotate(query_embs)

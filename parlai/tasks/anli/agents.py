@@ -45,11 +45,13 @@ def _path(opt, anli_round):
     else:
         raise RuntimeError('Not valid datatype.')
 
-    data_path = os.path.join(
-        opt['datapath'], ANLI, ANLI_PREFIX + ANLI_VERSION, anli_round, suffix + '.jsonl'
+    return os.path.join(
+        opt['datapath'],
+        ANLI,
+        ANLI_PREFIX + ANLI_VERSION,
+        anli_round,
+        f'{suffix}.jsonl',
     )
-
-    return data_path
 
 
 class RoundBaseTeacher(DialogTeacher):
@@ -106,12 +108,10 @@ class RoundBaseTeacher(DialogTeacher):
         super().__init__(opt, shared)
 
     def label_candidates(self):
-        if self.binary_classes:
-            return BICLASS_LABELS
-        return MULTINLI_LABELS
+        return BICLASS_LABELS if self.binary_classes else MULTINLI_LABELS
 
     def setup_data(self, path):
-        print('loading: ' + path)
+        print(f'loading: {path}')
         with PathManager.open(path, 'r') as data_file:
             for pair_line in data_file:
                 pair = json.loads(pair_line)

@@ -65,8 +65,7 @@ class RandomCandidateAgent(Agent):
         obs = self.observation
         if obs is None:
             return {'text': 'Nothing to reply to yet.'}
-        reply = {}
-        reply['id'] = self.getID()
+        reply = {'id': self.getID()}
         label_candidates = obs.get('label_candidates')
         if hasattr(self, 'label_candidates'):
             # override label candidates with candidate file if set

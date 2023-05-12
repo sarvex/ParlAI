@@ -71,9 +71,10 @@ def main(cfg: DictConfig) -> None:
     world_opt = {"turn_timeout": cfg.turn_timeout, "teacher": teacher}
 
     custom_bundle_path = cfg.mephisto.blueprint.get("custom_source_bundle", None)
-    if custom_bundle_path is not None:
-        if not os.path.exists(custom_bundle_path):
-            build_task(TASK_DIRECTORY)
+    if custom_bundle_path is not None and not os.path.exists(
+        custom_bundle_path
+    ):
+        build_task(TASK_DIRECTORY)
 
     shared_state = SharedParlAITaskState(
         world_opt=world_opt, onboarding_world_opt=world_opt

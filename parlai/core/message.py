@@ -28,8 +28,7 @@ class Message(dict):
     def __setitem__(self, key, val):
         if key in self:
             raise RuntimeError(
-                'Message already contains key `{}`. If this was intentional, '
-                'please use the function `force_set(key, value)`.'.format(key)
+                f'Message already contains key `{key}`. If this was intentional, please use the function `force_set(key, value)`.'
             )
         super().__setitem__(key, val)
 

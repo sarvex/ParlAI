@@ -7,11 +7,8 @@
 from parlai.core.metrics import METRICS_DISPLAY_DATA
 
 
-fout = open('metric_list.inc', 'w')
-
-fout.write('| Metric | Explanation |\n')
-fout.write('| ------ | ----------- |\n')
-for metric, display in sorted(METRICS_DISPLAY_DATA.items()):
-    fout.write(f'| `{metric}` | {display.description} |\n')
-
-fout.close()
+with open('metric_list.inc', 'w') as fout:
+    fout.write('| Metric | Explanation |\n')
+    fout.write('| ------ | ----------- |\n')
+    for metric, display in sorted(METRICS_DISPLAY_DATA.items()):
+        fout.write(f'| `{metric}` | {display.description} |\n')

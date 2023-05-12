@@ -21,8 +21,7 @@ def render_script(fout, key, registration):
         fout.write(f"__Aliases:__ {aliases}\n")
 
     mod = importlib.import_module(registration.klass.__module__)
-    doc = inspect.getdoc(mod)
-    if doc:
+    if doc := inspect.getdoc(mod):
         doc = doc.replace("## Examples", "### Examples")
         fout.write(doc)
         fout.write("\n")
@@ -34,7 +33,7 @@ def render_script(fout, key, registration):
             continue
         if action.dest == argparse.SUPPRESS:
             continue
-        if action.dest == 'help' or action.dest == 'helpall':
+        if action.dest in ['help', 'helpall']:
             continue
         action_strings = ",  ".join(f'`{a}`' for a in action.option_strings)
         if not action_strings:

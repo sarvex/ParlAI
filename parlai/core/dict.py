@@ -252,11 +252,9 @@ class DictionaryAgent(Agent):
         self._tokenization_mode = TokenizationMode.TEST_TIME_LABEL
 
         try:
-            self.tokenizer_fun = getattr(self, self.tokenizer + '_tokenize')
+            self.tokenizer_fun = getattr(self, f'{self.tokenizer}_tokenize')
         except AttributeError:
-            raise AttributeError(
-                'tokenizer type {} not yet supported'.format(self.tokenizer)
-            )
+            raise AttributeError(f'tokenizer type {self.tokenizer} not yet supported')
 
         if shared:
             self.freq = shared.get('freq', {})
@@ -358,9 +356,7 @@ class DictionaryAgent(Agent):
 
         if hasattr(self, 'bpe'):
             self.bpe.add_special_tokens(self, self.additional_special_tokens)
-        elif self.tokenizer in ('split', 're', 'space'):
-            pass
-        else:
+        elif self.tokenizer not in ('split', 're', 'space'):
             raise NotImplementedError(
                 f"Special Tokens are not supported with this tokenizer. "
                 f"(--dict-tokenizer {self.tokenizer}). File a github issue or "
@@ -574,12 +570,7 @@ class DictionaryAgent(Agent):
         """
         Remove elements below the frequency cutoff from the dictionary.
         """
-        to_remove = []
-        for token, freq in self.freq.items():
-            if freq < min_freq:
-                # queue up removals since can't mutate dict during iteration
-                to_remove.append(token)
-
+        to_remove = [token for token, freq in self.freq.items() if freq < min_freq]
         for token in to_remove:
             del self.freq[token]
             idx = self.tok2ind.pop(token)
@@ -594,8 +585,7 @@ class DictionaryAgent(Agent):
         for token, freq in self.freq.items():
             tokens = self.bpe_tokenize(token)
             if len(tokens) != 1:
-                for t in tokens:
-                    to_add.append((t, freq))
+                to_add.extend((t, freq) for t in tokens)
                 to_remove.append(token)
         for token in to_remove:
             del self.freq[token]
@@ -653,14 +643,13 @@ class DictionaryAgent(Agent):
         make_dir(os.path.dirname(filename))
 
         if self.tokenizer in ['bpe', 'gpt2', 'bytelevelbpe', 'slow_bytelevel_bpe']:
-            needs_removal = self.bpe.finalize(
+            if needs_removal := self.bpe.finalize(
                 self.freq, num_symbols=self.maxtokens, minfreq=self.minfreq
-            )
-            if needs_removal:
+            ):
                 self._remove_non_bpe()
             elif filename != self.opt.get('dict_file'):
                 # need to copy over the old codecs file
-                self.bpe.copy_codecs_file(filename + '.codecs')
+                self.bpe.copy_codecs_file(f'{filename}.codecs')
             if sort and self.bpe.should_sort():
                 self.sort(trim=False)
         elif sort:
@@ -676,10 +665,10 @@ class DictionaryAgent(Agent):
                 write.write('{tok}\t{cnt}\n'.format(tok=escape(tok), cnt=cnt))
 
         # save opt file
-        with PathManager.open(filename + '.opt', 'w', encoding='utf-8') as handle:
+        with PathManager.open(f'{filename}.opt', 'w', encoding='utf-8') as handle:
             json.dump(self.opt, handle, indent=4)
         # save the byte level bpe model file as well
-        if self.tokenizer == 'bytelevelbpe' or self.tokenizer == 'slow_bytelevel_bpe':
+        if self.tokenizer in ['bytelevelbpe', 'slow_bytelevel_bpe']:
             # This saves filename-vocab.json and filename-merges.txt as
             # hugging face tokenizer does
             self.bpe.save(os.path.dirname(filename), os.path.basename(filename))
@@ -748,12 +737,12 @@ class DictionaryAgent(Agent):
         ), f'Input to txt2vec must be string, not {type(text)}'
 
         itr = (self._word_lookup(token) for token in self.tokenize(text))
-        if vec_type == list or vec_type == tuple or vec_type == set:
+        if vec_type in [list, tuple, set]:
             res = vec_type(itr)
         elif vec_type == np.ndarray:
             res = np.fromiter(itr, np.int)
         else:
-            raise RuntimeError('Type {} not supported by dict'.format(vec_type))
+            raise RuntimeError(f'Type {vec_type} not supported by dict')
         return res
 
     def vec2txt(self, vector, delimiter=' '):
@@ -766,7 +755,7 @@ class DictionaryAgent(Agent):
         tokens = [self[int(idx)] for idx in vector]
         if self.tokenizer in ['gpt2', 'bpe', 'slow_bytelevel_bpe']:
             # if we used a BPE tokenizer we need to rejoin the encodings
-            text = self.bpe.decode(tokens, vector, delimiter)
+            return self.bpe.decode(tokens, vector, delimiter)
         elif self.tokenizer == 'bytelevelbpe':
             # We add special tokens in the beginning of ParlAI dict but in the
             # end of Hugging Face dict, there is an offset of #(extra tokens) between them.
@@ -778,11 +767,9 @@ class DictionaryAgent(Agent):
                 for idx in vector
             ]
             tokens = [self[int(idx)] for idx in vector]
-            text = self.bpe.decode(tokens, vector, delimiter)
+            return self.bpe.decode(tokens, vector, delimiter)
         else:
-            text = delimiter.join(self[int(idx)] for idx in vector)
-
-        return text
+            return delimiter.join(self[int(idx)] for idx in vector)
 
     def act(self):
         """

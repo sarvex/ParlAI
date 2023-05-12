@@ -53,9 +53,9 @@ class SafeLocalHumanAgent(LocalHumanAgent):
         """
         Initialize safety modules.
         """
-        if opt['safety'] == 'string_matcher' or opt['safety'] == 'all':
+        if opt['safety'] in ['string_matcher', 'all']:
             self.offensive_string_matcher = OffensiveStringMatcher()
-        if opt['safety'] == 'classifier' or opt['safety'] == 'all':
+        if opt['safety'] in ['classifier', 'all']:
             self.offensive_classifier = OffensiveLanguageClassifier()
 
         self.self_offensive = False
@@ -71,10 +71,10 @@ class SafeLocalHumanAgent(LocalHumanAgent):
             and text in self.offensive_string_matcher
         ):
             return True
-        if hasattr(self, 'offensive_classifier') and text in self.offensive_classifier:
-            return True
-
-        return False
+        return bool(
+            hasattr(self, 'offensive_classifier')
+            and text in self.offensive_classifier
+        )
 
     def observe(self, msg):
         """
@@ -84,9 +84,10 @@ class SafeLocalHumanAgent(LocalHumanAgent):
             # User was offensive, they must try again
             return
 
-        # Now check if bot was offensive
-        bot_offensive = self.check_offensive(msg.get('text', ''))
-        if not bot_offensive:
+        if bot_offensive := self.check_offensive(msg.get('text', '')):
+            msg.force_set('bot_offensive', True)
+            print(OFFENSIVE_BOT_REPLY)
+        else:
             # View bot message
             print(
                 display_messages(
@@ -97,9 +98,6 @@ class SafeLocalHumanAgent(LocalHumanAgent):
                 )
             )
             msg.force_set('bot_offensive', False)
-        else:
-            msg.force_set('bot_offensive', True)
-            print(OFFENSIVE_BOT_REPLY)
 
     def get_reply(self):
         reply_text = input(colorize('Enter Your Message:', 'field') + ' ')

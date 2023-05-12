@@ -108,8 +108,7 @@ class BaseIndexer(ABC):
             [self.index_id_to_db_id[i] for i in query_top_idxs]
             for query_top_idxs in indexes
         ]
-        result = [(db_ids[i], vectors[i]) for i in range(len(db_ids))]
-        return result
+        return [(db_ids[i], vectors[i]) for i in range(len(db_ids))]
 
     def serialize(self, file: str):
         """
@@ -241,8 +240,7 @@ class DenseHNSWFlatIndexer(BaseIndexer):
             search vectors of dimension [n_search, q_dim + 1]
         """
         aux_dim = np.zeros(len(query_vectors), dtype='float32')
-        query_hnsw_vectors = np.hstack((query_vectors, aux_dim.reshape(-1, 1)))
-        return query_hnsw_vectors
+        return np.hstack((query_vectors, aux_dim.reshape(-1, 1)))
 
     def deserialize_from(self, file: str, emb_path: Optional[str] = None):
         super().deserialize_from(file, emb_path)

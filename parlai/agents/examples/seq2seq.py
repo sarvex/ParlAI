@@ -118,15 +118,7 @@ class Decoder(nn.Module):
             The previous hidden state of the decoder.
         """
         embedded = self.embeddings(input)
-        if incr_state is None:
-            # this is our very first call. We want to seed the LSTM with the
-            # hidden state of the decoder
-            state = encoder_state
-        else:
-            # We've generated some tokens already, so we can reuse the existing
-            # decoder state
-            state = incr_state
-
+        state = encoder_state if incr_state is None else incr_state
         # get the new output and decoder incremental state
         output, incr_state = self.lstm(embedded, state)
 

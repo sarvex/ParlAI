@@ -29,8 +29,7 @@ class BrowserHandler(BaseHTTPRequestHandler):
     """
 
     def _interactive_running(self, reply_text):
-        data = {}
-        data['text'] = reply_text.decode('utf-8')
+        data = {'text': reply_text.decode('utf-8')}
         if data['text'] == "[DONE]":
             print('[ Closing socket... ]')
             SHARED['ws'].close()
@@ -57,9 +56,8 @@ class BrowserHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            model_response = {'id': 'Model', 'episode_done': False}
             message_available.wait()
-            model_response['text'] = new_message
+            model_response = {'id': 'Model', 'episode_done': False, 'text': new_message}
             message_available.clear()
             json_str = json.dumps(model_response)
             self.wfile.write(bytes(json_str, 'utf-8'))
@@ -138,7 +136,7 @@ def _run_browser():
 
     httpd = HTTPServer((host, serving_port), BrowserHandler)
 
-    print('Please connect to the link: http://{}:{}/'.format(host, serving_port))
+    print(f'Please connect to the link: http://{host}:{serving_port}/')
 
     SHARED['wb'] = httpd
 
@@ -186,7 +184,7 @@ if __name__ == "__main__":
     port = opt.get('port', 34596)
     print("Connecting to port: ", port)
     ws = websocket.WebSocketApp(
-        "ws://localhost:{}/websocket".format(port),
+        f"ws://localhost:{port}/websocket",
         on_message=on_message,
         on_error=on_error,
         on_close=on_close,

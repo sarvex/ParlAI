@@ -78,51 +78,6 @@ def print_announcements(opt):
     # no annoucements to make right now
     return
 
-    noannounce_file = os.path.join(opt.get('datapath'), 'noannouncements')
-    if PathManager.exists(noannounce_file):
-        # user has suppressed announcements, don't do anything
-        return
-
-    # useful constants
-    # all of these colors are bolded
-    RESET = '\033[0m'
-    BOLD = '\033[1m'
-    RED = '\033[1;91m'
-    YELLOW = '\033[1;93m'
-    GREEN = '\033[1;92m'
-    BLUE = '\033[1;96m'
-    CYAN = '\033[1;94m'
-    MAGENTA = '\033[1;95m'
-
-    # only use colors if we're outputting to a terminal
-    USE_COLORS = _sys.stdout.isatty()
-    if not USE_COLORS:
-        RESET = BOLD = RED = YELLOW = GREEN = BLUE = CYAN = MAGENTA = ''
-
-    # generate the rainbow stars
-    rainbow = [RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA]
-    size = 78 // len(rainbow)
-    stars = ''.join([color + '*' * size for color in rainbow])
-    stars += RESET
-
-    # do the actual output
-    print(
-        '\n'.join(
-            [
-                '',
-                stars,
-                BOLD,
-                'Announcements go here.',
-                RESET,
-                # don't bold the suppression command
-                'To suppress this message (and future announcements), run\n`touch {}`'.format(
-                    noannounce_file
-                ),
-                stars,
-            ]
-        )
-    )
-
 
 def get_model_name(opt):
     """
@@ -134,7 +89,7 @@ def get_model_name(opt):
         model_file = opt.get('model_file', None)
         if model_file is not None:
             model_file = modelzoo_path(opt.get('datapath'), model_file)
-            optfile = model_file + '.opt'
+            optfile = f'{model_file}.opt'
             if PathManager.exists(optfile):
                 new_opt = Opt.load(optfile)
                 model = new_opt.get('model', None)
@@ -147,10 +102,7 @@ def str2none(value: str):
 
     Otherwise, return the original value.
     """
-    if value.lower() == 'none':
-        return None
-    else:
-        return value
+    return None if value.lower() == 'none' else value
 
 
 def str2bool(value):
@@ -176,10 +128,7 @@ def str2floats(s):
 
 
 def str2multitask_weights(s):
-    if s == 'stochastic':
-        return s
-    else:
-        return str2floats(s)
+    return s if s == 'stochastic' else str2floats(s)
 
 
 def str2class(value):
@@ -203,8 +152,7 @@ def class2str(value):
     """
     s = str(value)
     s = s[s.find('\'') + 1 : s.rfind('\'')]  # pull out import path
-    s = ':'.join(s.rsplit('.', 1))  # replace last period with ':'
-    return s
+    return ':'.join(s.rsplit('.', 1))
 
 
 def fix_underscores(args):
@@ -999,11 +947,7 @@ class ParlaiParser(argparse.ArgumentParser):
 
         if nohelp:
             # ignore help
-            args = [
-                a
-                for a in args
-                if a != '-h' and a != '--help' and a != '--helpall' and a != '--h'
-            ]
+            args = [a for a in args if a not in ['-h', '--help', '--helpall', '--h']]
         return super().parse_known_args(args, namespace)
 
     def _load_known_opts(self, optfile, parsed):
@@ -1032,7 +976,7 @@ class ParlaiParser(argparse.ArgumentParser):
                     )
                 else:
                     raise RuntimeError(
-                        'Trying to set opt from file that does not exist: ' + str(key)
+                        f'Trying to set opt from file that does not exist: {str(key)}'
                     )
             if key not in opt['override']:
                 opt[key] = value
@@ -1133,7 +1077,7 @@ class ParlaiParser(argparse.ArgumentParser):
                 )
 
         # add start time of an experiment
-        self.opt['starttime'] = datetime.datetime.today().strftime('%b%d_%H-%M')
+        self.opt['starttime'] = datetime.datetime.now().strftime('%b%d_%H-%M')
 
     def parse_and_process_known_args(self, args=None):
         """
@@ -1215,11 +1159,10 @@ class ParlaiParser(argparse.ArgumentParser):
                 if bool(value):
                     string_args.append(last_option_string)
             elif isinstance(action, argparse._StoreAction) and action.nargs is None:
-                string_args.append(last_option_string)
-                string_args.append(self._value2argstr(value))
+                string_args.extend((last_option_string, self._value2argstr(value)))
             elif isinstance(action, argparse._StoreAction) and action.nargs in '*+':
                 string_args.append(last_option_string)
-                string_args.extend([self._value2argstr(value) for v in value])
+                string_args.extend([self._value2argstr(value) for _ in value])
             else:
                 raise TypeError(f"Don't know what to do with {action}")
 
@@ -1251,8 +1194,7 @@ class ParlaiParser(argparse.ArgumentParser):
                 if bool(value):
                     string_args.append(last_option_string)
             elif isinstance(action, argparse._StoreAction) and action.nargs is None:
-                string_args.append(last_option_string)
-                string_args.append(self._value2argstr(value))
+                string_args.extend((last_option_string, self._value2argstr(value)))
             elif isinstance(action, argparse._StoreAction) and action.nargs in '*+':
                 string_args.append(last_option_string)
                 # Special case: Labels
@@ -1303,9 +1245,8 @@ class ParlaiParser(argparse.ArgumentParser):
             action_attr['recommended'] = rec
         action_attr['hidden'] = kwargs.get('hidden', False)
         action_attr['real_help'] = kwargs.get('help', None)
-        if 'hidden' in kwargs:
-            if kwargs.pop('hidden'):
-                kwargs['help'] = argparse.SUPPRESS
+        if 'hidden' in kwargs and kwargs.pop('hidden'):
+            kwargs['help'] = argparse.SUPPRESS
 
         if 'type' in kwargs and kwargs['type'] is bool:
             # common error, we really want simple form

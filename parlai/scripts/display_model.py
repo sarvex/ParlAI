@@ -37,8 +37,8 @@ def simple_display(opt, world, turn):
     response_text = response.get('text', 'No response')
     labels = teacher.get('labels', teacher.get('eval_labels', ['[no labels field]']))
     labels = '|'.join(labels)
-    print(colorize('    labels: ' + labels, 'labels'))
-    print(colorize('     model: ' + response_text, 'text2'))
+    print(colorize(f'    labels: {labels}', 'labels'))
+    print(colorize(f'     model: {response_text}', 'text2'))
 
 
 def setup_args():

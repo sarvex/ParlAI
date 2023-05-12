@@ -79,7 +79,7 @@ def build_human_nonadv_safety_eval_dataset(opt: Opt):
 
 def build_data_from_path(dpath, version, downloadable_files):
     if not build_data.built(dpath, version_string=version):
-        print('[building data: ' + dpath + ']')
+        print(f'[building data: {dpath}]')
         if build_data.built(dpath):
             # An older version exists, so remove these outdated files
             build_data.remove_dir(dpath)

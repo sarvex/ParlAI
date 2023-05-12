@@ -54,7 +54,7 @@ class Vacuum(ParlaiScript):
             )
         if not self.opt['no_backup']:
             logging.info(f"Backing up {model_file} to {model_file}.unvacuumed")
-            PathManager.mv(model_file, model_file + ".unvacuumed")
+            PathManager.mv(model_file, f"{model_file}.unvacuumed")
         for key in [
             'optimizer',
             'optimizer_type',

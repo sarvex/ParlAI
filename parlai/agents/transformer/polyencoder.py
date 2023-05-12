@@ -135,8 +135,7 @@ class PolyencoderAgent(TorchRankerAgent):
         """
         kwargs['add_start'] = True
         kwargs['add_end'] = True
-        obs = super().vectorize(*args, **kwargs)
-        return obs
+        return super().vectorize(*args, **kwargs)
 
     def _set_text_vec(self, *args, **kwargs):
         """
@@ -240,8 +239,7 @@ class PolyencoderAgent(TorchRankerAgent):
         """
         ctxt_rep, ctxt_rep_mask = self.get_ctxt_rep(batch)
         cand_rep = self.get_cand_rep(batch, cand_vecs, cand_encs)
-        scores = self.get_scores(ctxt_rep, ctxt_rep_mask, cand_rep)
-        return scores
+        return self.get_scores(ctxt_rep, ctxt_rep_mask, cand_rep)
 
     def _get_batch_size(self, batch) -> int:
         """
@@ -466,7 +464,7 @@ class PolyEncoderModule(torch.nn.Module):
             cand_embed = self.encoder_cand(cand_tokens.view(bsz * num_cands, -1))
             cand_embed = cand_embed.view(bsz, num_cands, -1)
 
-        if len(ctxt_inputs) > 0:
+        if ctxt_inputs:
             assert 'ctxt_tokens' in ctxt_inputs
             if ctxt_inputs['ctxt_tokens'] is not None:
                 assert len(ctxt_inputs['ctxt_tokens'].shape) == 2
@@ -543,8 +541,7 @@ class PolyEncoderModule(torch.nn.Module):
         ctxt_final_rep = self.attend(
             self.attention, cand_embed, ctxt_rep, ctxt_rep, ctxt_rep_mask
         )
-        scores = torch.sum(ctxt_final_rep * cand_embed, 2)
-        return scores
+        return torch.sum(ctxt_final_rep * cand_embed, 2)
 
     def forward(
         self,
@@ -577,7 +574,7 @@ class PolyEncoderModule(torch.nn.Module):
         :param cand_rep:
             encoded representation of the candidates
         """
-        if len(ctxt_inputs) > 0 or cand_tokens is not None:
+        if ctxt_inputs or cand_tokens is not None:
             return self.encode(cand_tokens=cand_tokens, **ctxt_inputs)
         elif (
             ctxt_rep is not None and ctxt_rep_mask is not None and cand_rep is not None

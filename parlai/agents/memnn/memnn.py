@@ -73,8 +73,7 @@ class MemnnAgent(TorchRankerAgent):
     def __init__(self, opt, shared=None):
         self.id = 'MemNN'
         self.memsize = opt['memsize']
-        if self.memsize < 0:
-            self.memsize = 0
+        self.memsize = max(self.memsize, 0)
         self.use_time_features = opt['time_features']
         super().__init__(opt, shared)
 
@@ -107,34 +106,26 @@ class MemnnAgent(TorchRankerAgent):
         elif cands.dim() == 3:
             return torch.bmm(output.unsqueeze(1), cands.transpose(1, 2)).squeeze(1)
         else:
-            raise RuntimeError(
-                'Unexpected candidate dimensions {}' ''.format(cands.dim())
-            )
+            raise RuntimeError(f'Unexpected candidate dimensions {cands.dim()}')
 
     def encode_candidates(self, padded_cands):
         return self.model.answer_embedder(padded_cands)
 
     def score_candidates(self, batch, cand_vecs, cand_encs=None):
         mems = self._build_mems(batch.memory_vecs)
-        # Check for rows that have no non-null tokens
-        pad_mask = None
-        if mems is not None:
-            pad_mask = (mems != self.NULL_IDX).sum(dim=-1) == 0
-
+        pad_mask = None if mems is None else (mems != self.NULL_IDX).sum(dim=-1) == 0
         if cand_encs is not None:
             state, _ = self.model(batch.text_vec, mems, None, pad_mask)
         else:
             state, cand_encs = self.model(batch.text_vec, mems, cand_vecs, pad_mask)
-        scores = self._score(state, cand_encs)
-
-        return scores
+        return self._score(state, cand_encs)
 
     @lru_cache(maxsize=None)  # bounded by opt['memsize'], cache string concats
     def _time_feature(self, i):
         """
         Return time feature token at specified index.
         """
-        return '__tf{}__'.format(i)
+        return f'__tf{i}__'
 
     def vectorize(self, *args, **kwargs):
         """
@@ -153,7 +144,7 @@ class MemnnAgent(TorchRankerAgent):
         # get valid observations
         valid_obs = [(i, ex) for i, ex in enumerate(obs_batch) if self.is_valid(ex)]
 
-        if len(valid_obs) == 0:
+        if not valid_obs:
             return batch
 
         valid_inds, exs = zip(*valid_obs)

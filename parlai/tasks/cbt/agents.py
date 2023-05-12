@@ -15,15 +15,15 @@ def _path(task, opt):
     build(opt)
     suffix = ''
     dt = opt['datatype'].split(':')[0]
-    if dt == 'train':
-        suffix = 'train'
-    elif dt == 'test':
+    if dt == 'test':
         suffix = 'test_2500ex'
+    elif dt == 'train':
+        suffix = 'train'
     elif dt == 'valid':
         suffix = 'valid_2000ex'
 
     return os.path.join(
-        opt['datapath'], 'CBT', 'CBTest', 'data', task + '_' + suffix + '.txt'
+        opt['datapath'], 'CBT', 'CBTest', 'data', f'{task}_{suffix}.txt'
     )
 
 

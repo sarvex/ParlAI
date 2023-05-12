@@ -43,7 +43,7 @@ class DefaultTeacher(FixedDialogTeacher):
         else:
             build(opt)
             self._setup_data()
-            self.num_ex = sum([len(x) for x in self.data])
+            self.num_ex = sum(len(x) for x in self.data)
             self.num_ep = len(self.data)
         self.reset()
 
@@ -69,7 +69,7 @@ class DefaultTeacher(FixedDialogTeacher):
             entries = []
 
             for question in episode['questions']:
-                new_episode = dict()
+                new_episode = {}
                 new_episode['asin'] = episode['asin']
                 new_episode['askerID'] = question['askerID']
                 new_episode['questionTime'] = question['questionTime']
@@ -103,8 +103,7 @@ class DefaultTeacher(FixedDialogTeacher):
     def get(self, episode_idx, entry_idx=0):
         ep = self.data[episode_idx]
         entry = ep[entry_idx]
-        action = dict()
-        action['id'] = episode_idx
+        action = {'id': episode_idx}
         for i, key in enumerate(EXISTING_KEYS):
             if i < 2:
                 continue

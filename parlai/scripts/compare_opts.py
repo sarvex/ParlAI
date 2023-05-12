@@ -27,18 +27,13 @@ def compare_opts(opt_path_1: str, opt_path_2: str, load_raw: bool = False) -> st
         opt1 = Opt.load(opt_path_1)
         opt2 = Opt.load(opt_path_2)
 
-    outputs = list()
+    outputs = ['\nArgs only found in opt 1:']
 
-    outputs.append('\nArgs only found in opt 1:')
     opt1_only_keys = sorted([k for k in opt1.keys() if k not in opt2.keys()])
-    for key in opt1_only_keys:
-        outputs.append(f'{key}: {opt1[key]}')
-
+    outputs.extend(f'{key}: {opt1[key]}' for key in opt1_only_keys)
     outputs.append('\nArgs only found in opt 2:')
     opt2_only_keys = sorted([k for k in opt2.keys() if k not in opt1.keys()])
-    for key in opt2_only_keys:
-        outputs.append(f'{key}: {opt2[key]}')
-
+    outputs.extend(f'{key}: {opt2[key]}' for key in opt2_only_keys)
     outputs.append('\nArgs that are different in both opts:')
     keys_with_conflicting_values = sorted(
         [k for k, v in opt1.items() if k in opt2.keys() and v != opt2[k]]
@@ -55,18 +50,21 @@ def compare_opts(opt_path_1: str, opt_path_2: str, load_raw: bool = False) -> st
                     or inner_key not in opt2[key]
                     or opt1[key][inner_key] != opt2[key][inner_key]
                 ):
-                    outputs.append(f'\t{inner_key}:')
-                    outputs.append(
-                        f'\t\tIn opt 1: {opt1[key].get(inner_key, "<MISSING>")}'
-                    )
-                    outputs.append(
-                        f'\t\tIn opt 2: {opt2[key].get(inner_key, "<MISSING>")}'
+                    outputs.extend(
+                        (
+                            f'\t{inner_key}:',
+                            f'\t\tIn opt 1: {opt1[key].get(inner_key, "<MISSING>")}',
+                            f'\t\tIn opt 2: {opt2[key].get(inner_key, "<MISSING>")}',
+                        )
                     )
         else:
-            outputs.append(f'{key}:')
-            outputs.append(f'\tIn opt 1: {opt1[key]}')
-            outputs.append(f'\tIn opt 2: {opt2[key]}')
-
+            outputs.extend(
+                (
+                    f'{key}:',
+                    f'\tIn opt 1: {opt1[key]}',
+                    f'\tIn opt 2: {opt2[key]}',
+                )
+            )
     return '\n'.join(outputs)
 
 

@@ -112,8 +112,7 @@ class AcuteEvalRunner(TaskRunner):
                 self.block_qualification = f"{task_id}_failed_onboarding"
                 self.args.blueprint.block_qualification = self.block_qualification
                 logger.warning(
-                    "No block_qualification set in opt, automatically creating "
-                    "new qualification {}".format(self.block_qualification)
+                    f"No block_qualification set in opt, automatically creating new qualification {self.block_qualification}"
                 )
             found_qualifications = self.task_run.db.find_qualifications(
                 self.block_qualification
@@ -420,12 +419,11 @@ class AcuteEvalRunner(TaskRunner):
         if init_state is not None:
             # reconnecting agent, give what we've got
             return init_state
-        else:
-            worker = agent.get_worker()
-            task_data = self.get_new_task_data(worker.db_id)
-            agent.state.set_init_state(task_data)
-            self.unit_agent_map[agent.get_unit().db_id] = (worker.db_id, task_data)
-            return task_data
+        worker = agent.get_worker()
+        task_data = self.get_new_task_data(worker.db_id)
+        agent.state.set_init_state(task_data)
+        self.unit_agent_map[agent.get_unit().db_id] = (worker.db_id, task_data)
+        return task_data
 
     def run_unit(self, unit: "Unit", agent: "Agent") -> None:
         """

@@ -37,9 +37,7 @@ class EpisodeReverseMutator(EpisodeMutator):
         self.rng = random.Random(42)
 
     def episode_mutation(self, episode: List[Message]) -> List[Message]:
-        texts = []
-        for turn in episode:
-            texts.append(turn.pop('text'))
+        texts = [turn.pop('text') for turn in episode]
         if self.opt.get('preserve_context'):
             first_turn = texts[0].split('\n')
             context, text = first_turn[:-1], first_turn[-1]

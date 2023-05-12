@@ -67,10 +67,8 @@ class RepeatLabelAgent(Agent):
         obs = self.observation
         if obs is None:
             return {'text': 'Nothing to repeat yet.'}
-        reply = {}
-        reply['id'] = self.getID()
-        labels = obs.get('labels', obs.get('eval_labels', None))
-        if labels:
+        reply = {'id': self.getID()}
+        if labels := obs.get('labels', obs.get('eval_labels', None)):
             if random.random() >= self.cantAnswerPercent:
                 if self.returnOneRandomAnswer:
                     reply['text'] = labels[random.randrange(len(labels))]

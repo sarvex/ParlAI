@@ -40,8 +40,7 @@ class CrossencoderAgent(TorchRankerAgent):
         """
         kwargs['add_start'] = True
         kwargs['add_end'] = True
-        obs = super().vectorize(*args, **kwargs)
-        return obs
+        return super().vectorize(*args, **kwargs)
 
     def _set_text_vec(self, *args, **kwargs):
         """
@@ -103,5 +102,4 @@ class CrossEncoderModule(torch.nn.Module):
         Scores each concatenation text + candidate.
         """
         encoded = self.encoder(tokens, None, segments)
-        res = self.linear_layer(encoded)
-        return res
+        return self.linear_layer(encoded)

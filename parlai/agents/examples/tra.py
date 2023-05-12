@@ -86,8 +86,7 @@ class TraAgent(TorchRankerAgent):
         None (when we cache the encoding of the candidate vectors), you may use these
         instead of calling self.model on `cand_vecs`.
         """
-        scores = self.model.forward(batch, cand_vecs, cand_encs)
-        return scores
+        return self.model.forward(batch, cand_vecs, cand_encs)
 
     def build_model(self):
         """

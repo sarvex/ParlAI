@@ -99,13 +99,7 @@ def _name_to_agent_class(name: str):
         class of agent, e.g. LocalHumanAgent.
     """
     words = name.split('_')
-    class_name = ''
-    for w in words:
-        # capitalize the first letter
-        class_name += w[0].upper() + w[1:]
-    # add Agent to the end of the name
-    class_name += 'Agent'
-    return class_name
+    return ''.join(w[0].upper() + w[1:] for w in words) + 'Agent'
 
 
 def load_agent_module(agent_path: str):
@@ -155,9 +149,7 @@ def load_agent_module(agent_path: str):
         path_list = agent_path.split(':')
         if len(path_list) != 3:
             raise RuntimeError(
-                'projects paths should follow pattern '
-                'projects:folder:model; you used {}'
-                ''.format(agent_path)
+                f'projects paths should follow pattern projects:folder:model; you used {agent_path}'
             )
         folder_name = path_list[1]
         model_name = path_list[2]
@@ -172,7 +164,7 @@ def load_agent_module(agent_path: str):
         # e.g. -m my_agent/special_variant
         # will check parlai.agents.my_agent.special_variant:SpecialVariantAgent
         path_list = agent_path.split('/')
-        module_name = "%s.agents.%s.%s" % (repo, path_list[0], path_list[1])
+        module_name = f"{repo}.agents.{path_list[0]}.{path_list[1]}"
         class_name = _name_to_agent_class(path_list[1])
     else:
         # e.g. -m seq2seq
@@ -180,15 +172,13 @@ def load_agent_module(agent_path: str):
         # then check parlai.agents.seq2seq.seq2seq for Seq2seqAgent second
         class_name = _name_to_agent_class(agent_path)
         try:
-            module_name = "%s.agents.%s.agents" % (repo, agent_path)
+            module_name = f"{repo}.agents.{agent_path}.agents"
             importlib.import_module(module_name)  # check if it's there
         except ImportError:
-            module_name = "%s.agents.%s.%s" % (repo, agent_path, agent_path)
+            module_name = f"{repo}.agents.{agent_path}.{agent_path}"
 
     my_module = importlib.import_module(module_name)
-    model_class = getattr(my_module, class_name)
-
-    return model_class
+    return getattr(my_module, class_name)
 
 
 ##############################################################
@@ -242,11 +232,9 @@ def load_task_module(taskname: str):
         module_name = task_path
     else:
         task = task_path.lower()
-        module_name = "%s.tasks.%s.agents" % (repo, task)
+        module_name = f"{repo}.tasks.{task}.agents"
 
-    task_module = importlib.import_module(module_name)
-
-    return task_module
+    return importlib.import_module(module_name)
 
 
 def load_teacher_module(taskname: str):
@@ -288,15 +276,12 @@ def load_teacher_module(taskname: str):
             # Reformat from underscore to CamelCase and append "Teacher" to
             # class name by default if a complete path is not given.
             words = teacher.split('_')
-            teacher_name = ''
-            for w in words:
-                teacher_name += w[0].upper() + w[1:]
-            teacher = teacher_name + "Teacher"
+            teacher_name = ''.join(w[0].upper() + w[1:] for w in words)
+            teacher = f"{teacher_name}Teacher"
     else:
         teacher = "DefaultTeacher"
 
-    teacher_class = getattr(task_module, teacher)
-    return teacher_class
+    return getattr(task_module, teacher)
 
 
 ##############################################################
@@ -364,18 +349,17 @@ def load_world_module(
 
     if len(task_path_list) > 1:
         task_path_list[1] = task_path_list[1][0].upper() + task_path_list[1][1:]
-        world_name = task_path_list[1] + "World"
+        world_name = f"{task_path_list[1]}World"
         if interactive_task:
-            world_name = "Interactive" + world_name
+            world_name = f"Interactive{world_name}"
         elif selfchat_task:
-            world_name = "SelfChat" + world_name
+            world_name = f"SelfChat{world_name}"
+    elif interactive_task:
+        world_name = "InteractiveWorld"
+    elif selfchat_task:
+        world_name = "SelfChatWorld"
     else:
-        if interactive_task:
-            world_name = "InteractiveWorld"
-        elif selfchat_task:
-            world_name = "SelfChatWorld"
-        else:
-            world_name = "DefaultWorld"
+        world_name = "DefaultWorld"
 
     if '.' in task_path_list[0]:
         # The case of opt['task'] = 'parlai.tasks.squad.agents:DefaultTeacher'

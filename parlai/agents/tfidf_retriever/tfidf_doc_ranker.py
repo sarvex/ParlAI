@@ -31,7 +31,7 @@ class TfidfDocRanker(object):
             strict: fail on empty queries or continue (and return empty result)
         """
         # Load from disk
-        logger.info('Loading %s' % tfidf_path)
+        logger.info(f'Loading {tfidf_path}')
         matrix, metadata = utils.load_sparse_csr(tfidf_path)
         self.doc_mat = matrix
         self.ngrams = metadata['ngram']
@@ -61,7 +61,7 @@ class TfidfDocRanker(object):
         if len(res.data) <= k:
             o_sort = np.argsort(-res.data)
         else:
-            o = np.argpartition(-res.data, k)[0:k]
+            o = np.argpartition(-res.data, k)[:k]
             o_sort = o[np.argsort(-res.data[o])]
 
         doc_scores = res.data[o_sort]
@@ -85,12 +85,11 @@ class TfidfDocRanker(object):
         words = self.parse(utils.normalize(query))
         wids = [utils.hash(w, self.hash_size) for w in words]
 
-        if len(wids) == 0:
+        if not wids:
             if self.strict:
-                raise RuntimeError('No valid word in: %s' % query)
-            else:
-                logger.warning('No valid word in: %s' % query)
-                return sp.csr_matrix((1, self.hash_size))
+                raise RuntimeError(f'No valid word in: {query}')
+            logger.warning(f'No valid word in: {query}')
+            return sp.csr_matrix((1, self.hash_size))
 
         # Count TF
         wids_unique, wids_counts = np.unique(wids, return_counts=True)
@@ -106,6 +105,4 @@ class TfidfDocRanker(object):
 
         # One row, sparse csr matrix
         indptr = np.array([0, len(wids_unique)])
-        spvec = sp.csr_matrix((data, wids_unique, indptr), shape=(1, self.hash_size))
-
-        return spvec
+        return sp.csr_matrix((data, wids_unique, indptr), shape=(1, self.hash_size))

@@ -69,12 +69,16 @@ def _all_split_datafiles(opt: Opt) -> List[str]:
     if split_type in {SplitType.SEEN, SplitType.UNSEEN}:
         # For seen/unseen split, the full set of dialogs is split
         # across train, valid, test seen, and test unseen
-        for split in ['train', 'valid', 'test']:
-            datafiles.append(_datafile(split, SplitType.SEEN))
+        datafiles.extend(
+            _datafile(split, SplitType.SEEN)
+            for split in ['train', 'valid', 'test']
+        )
         datafiles.append(_datafile('test', SplitType.UNSEEN))
     else:
-        for split in ['train', 'valid', 'test']:
-            datafiles.append(_datafile(split, split_type))
+        datafiles.extend(
+            _datafile(split, split_type)
+            for split in ['train', 'valid', 'test']
+        )
     return datafiles
 
 
@@ -121,10 +125,7 @@ def _article_section_to_text(
         if knowledge_keys and k not in knowledge_keys:
             continue
         fact = f"{k}:"
-        if isinstance(v, str):
-            fact += v
-        else:
-            fact += ",".join(v)
+        fact += v if isinstance(v, str) else ",".join(v)
         texts.append(fact)
     return fact_delimiter.join(texts)
 

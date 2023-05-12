@@ -25,7 +25,7 @@ def build(opt):
     dpath = os.path.join(opt['datapath'], 'ConvAI2')
 
     if not build_data.built(dpath, version):
-        logging.info('building data: ' + dpath)
+        logging.info(f'building data: {dpath}')
         if build_data.built(dpath):
             # An older version exists, so remove these outdated files.
             build_data.remove_dir(dpath)

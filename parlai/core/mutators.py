@@ -88,8 +88,7 @@ class Mutator(abc.ABC):
             return []
         assert isinstance(mutator_names, str)
         names = mutator_names.replace('+', ',').split(',')
-        mutators = [MUTATOR_REGISTRY[name] for name in names]
-        return mutators
+        return [MUTATOR_REGISTRY[name] for name in names]
 
     @classmethod
     def add_cmdline_args(
@@ -215,11 +214,9 @@ class EpisodeMutator(Mutator):
         """
         for episode in self._group_into_episodes(messages):
             if episode and episode[0].is_padding():
-                for message in episode:
-                    yield message
+                yield from episode
             else:
-                mutated_episode = self._add_episode_done(self.episode_mutation(episode))
-                yield from mutated_episode
+                yield from self._add_episode_done(self.episode_mutation(episode))
 
 
 class ManyEpisodeMutator(Mutator):

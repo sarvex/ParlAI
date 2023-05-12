@@ -23,7 +23,7 @@ class MessageSocketHandler(WebSocketHandler):
         self.subs: Dict[int, T] = kwargs.pop('subs')
 
         def _default_callback(message, socketID):
-            logging.warning(f"No callback defined for new WebSocket messages.")
+            logging.warning("No callback defined for new WebSocket messages.")
 
         self.message_callback = kwargs.pop('message_callback', _default_callback)
         self.sid = get_rand_id()
@@ -57,7 +57,7 @@ class MessageSocketHandler(WebSocketHandler):
                 See `WebsocketAgent.put_data` for more information about the
                 attachment dict structure.
         """
-        logging.info('websocket message from client: {}'.format(message_text))
+        logging.info(f'websocket message from client: {message_text}')
         message = json.loads(message_text)
         message = {
             'text': message.get('text', ''),

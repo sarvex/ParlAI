@@ -51,9 +51,7 @@ class Tokens(object):
         """
 
         def _skip(gram):
-            if not filter_fn:
-                return False
-            return filter_fn(gram)
+            return False if not filter_fn else filter_fn(gram)
 
         words = self.words(uncased)
         ngrams = [

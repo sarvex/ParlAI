@@ -73,55 +73,53 @@ class BiEncoderRankerAgent(TorchRankerAgent):
             self.vocab_candidates = shared['vocab_candidates']
             self.vocab_candidate_vecs = shared['vocab_candidate_vecs']
             self.vocab_candidate_encs = shared['vocab_candidate_encs']
-        else:
-            if 'vocab' in (self.opt['candidates'], self.opt['eval_candidates']):
-                cands = []
-                vecs = []
-                for ind in range(1, len(self.dict)):
-                    txt = self.dict[ind]
-                    cands.append(txt)
-                    vecs.append(
-                        self._vectorize_text(
-                            txt,
-                            add_start=True,
-                            add_end=True,
-                            truncate=self.label_truncate,
-                        )
+        elif 'vocab' in (self.opt['candidates'], self.opt['eval_candidates']):
+            cands = []
+            vecs = []
+            for ind in range(1, len(self.dict)):
+                txt = self.dict[ind]
+                cands.append(txt)
+                vecs.append(
+                    self._vectorize_text(
+                        txt,
+                        add_start=True,
+                        add_end=True,
+                        truncate=self.label_truncate,
                     )
-                self.vocab_candidates = cands
-                self.vocab_candidate_vecs = padded_3d([vecs]).squeeze(0)
-                print(
-                    "[ Loaded fixed candidate set (n = {}) from vocabulary ]"
-                    "".format(len(self.vocab_candidates))
                 )
-                enc_path = self.opt.get('model_file') + '.vocab.encs'
-                if PathManager.exists(enc_path):
-                    self.vocab_candidate_encs = self.load_candidates(
-                        enc_path, cand_type='vocab encodings'
-                    )
-                else:
-                    cand_encs = []
-                    vec_batches = [
-                        self.vocab_candidate_vecs[i : i + 512]
-                        for i in range(0, len(self.vocab_candidate_vecs), 512)
-                    ]
-                    print(
-                        "[ Vectorizing vocab candidates ({} batch(es) of up "
-                        "to 512) ]".format(len(vec_batches))
-                    )
-                    for vec_batch in tqdm(vec_batches):
-                        cand_encs.append(self.encode_candidates(vec_batch))
-                    self.vocab_candidate_encs = torch.cat(cand_encs, 0)
-                    self.save_candidates(
-                        self.vocab_candidate_encs, enc_path, cand_type='vocab encodings'
-                    )
-                if self.use_cuda:
-                    self.vocab_candidate_vecs = self.vocab_candidate_vecs.cuda()
-                    self.vocab_candidate_encs = self.vocab_candidate_encs.cuda()
+            self.vocab_candidates = cands
+            self.vocab_candidate_vecs = padded_3d([vecs]).squeeze(0)
+            print(
+                f"[ Loaded fixed candidate set (n = {len(self.vocab_candidates)}) from vocabulary ]"
+            )
+            enc_path = self.opt.get('model_file') + '.vocab.encs'
+            if PathManager.exists(enc_path):
+                self.vocab_candidate_encs = self.load_candidates(
+                    enc_path, cand_type='vocab encodings'
+                )
             else:
-                self.vocab_candidates = None
-                self.vocab_candidate_vecs = None
-                self.vocab_candidate_encs = None
+                vec_batches = [
+                    self.vocab_candidate_vecs[i : i + 512]
+                    for i in range(0, len(self.vocab_candidate_vecs), 512)
+                ]
+                print(
+                    f"[ Vectorizing vocab candidates ({len(vec_batches)} batch(es) of up to 512) ]"
+                )
+                cand_encs = [
+                    self.encode_candidates(vec_batch)
+                    for vec_batch in tqdm(vec_batches)
+                ]
+                self.vocab_candidate_encs = torch.cat(cand_encs, 0)
+                self.save_candidates(
+                    self.vocab_candidate_encs, enc_path, cand_type='vocab encodings'
+                )
+            if self.use_cuda:
+                self.vocab_candidate_vecs = self.vocab_candidate_vecs.cuda()
+                self.vocab_candidate_encs = self.vocab_candidate_encs.cuda()
+        else:
+            self.vocab_candidates = None
+            self.vocab_candidate_vecs = None
+            self.vocab_candidate_encs = None
 
     def vectorize_fixed_candidates(self, cands_batch):
         """

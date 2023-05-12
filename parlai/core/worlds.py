@@ -77,12 +77,7 @@ class World(object):
     def __init__(self, opt: Opt, agents=None, shared=None):
         self.id = opt['task']
         self.opt = copy.deepcopy(opt)
-        if shared:
-            # Create agents based on shared data.
-            self.agents = create_agents_from_shared(shared['agents'])
-        else:
-            # Add passed in agents to world directly.
-            self.agents = agents
+        self.agents = create_agents_from_shared(shared['agents']) if shared else agents
         self.max_exs = None
         self.total_exs = 0
         self.total_epochs = 0
@@ -141,11 +136,11 @@ class World(object):
         """
         Share the world.
         """
-        shared_data = {}
-        shared_data['world_class'] = type(self)
-        shared_data['opt'] = self.opt
-        shared_data['agents'] = self._share_agents()
-        return shared_data
+        return {
+            'world_class': type(self),
+            'opt': self.opt,
+            'agents': self._share_agents(),
+        }
 
     def clone(self):
         """
@@ -160,10 +155,7 @@ class World(object):
         Allows other classes to create the same agents without duplicating the data
         (i.e. sharing parameters).
         """
-        if not hasattr(self, 'agents'):
-            return None
-        shared_agents = [a.share() for a in self.agents]
-        return shared_agents
+        return [a.share() for a in self.agents] if hasattr(self, 'agents') else None
 
     def get_agents(self):
         """
@@ -284,10 +276,11 @@ class World(object):
         self.total_parleys += 1
         if self.max_exs is None:
             if 'num_epochs' in self.opt and self.opt['num_epochs'] > 0:
-                if self.num_examples:
-                    self.max_exs = self.num_examples() * self.opt['num_epochs']
-                else:
-                    self.max_exs = -1
+                self.max_exs = (
+                    self.num_examples() * self.opt['num_epochs']
+                    if self.num_examples
+                    else -1
+                )
             else:
                 self.max_exs = -1
         # when we know the size of the data
@@ -295,10 +288,8 @@ class World(object):
             self.total_epochs = (
                 self.total_parleys * self.opt.get('batchsize', 1) / self.num_examples()
             )
-        # when we do not know the size of the data
-        else:
-            if self.epoch_done():
-                self.total_epochs += 1
+        elif self.epoch_done():
+            self.total_epochs += 1
 
 
 class DialogPartnerWorld(World):
@@ -327,11 +318,11 @@ class DialogPartnerWorld(World):
         if shared:
             # Create agents based on shared data.
             self.agents = create_agents_from_shared(shared['agents'])
-        else:
-            if len(agents) != 2:
-                raise RuntimeError('There must be exactly two agents for this world.')
+        elif len(agents) == 2:
             # Add passed in agents directly.
             self.agents = agents
+        else:
+            raise RuntimeError('There must be exactly two agents for this world.')
         self.acts = [None] * len(self.agents)
         if self.agents is not None and len(self.agents) > 0:
             # Name the world after the first agent.
@@ -441,12 +432,7 @@ class MultiAgentDialogWorld(World):
 
     def __init__(self, opt: Opt, agents, shared=None):
         super().__init__(opt)
-        if shared:
-            # Create agents based on shared data.
-            self.agents = create_agents_from_shared(shared['agents'])
-        else:
-            # Add passed in agents directly.
-            self.agents = agents
+        self.agents = create_agents_from_shared(shared['agents']) if shared else agents
         self.acts = [None] * len(self.agents)
 
     def parley(self):
@@ -534,8 +520,7 @@ class MultiWorld(World):
         super().__init__(opt)
         self.worlds: List[World] = []
         for index, k in enumerate(opt['task'].split(',')):
-            k = k.strip()
-            if k:
+            if k := k.strip():
                 if shared:
                     # Create worlds based on shared data.
                     s = shared['worlds'][index]
@@ -562,10 +547,7 @@ class MultiWorld(World):
             weights = [w.num_episodes() for w in self.worlds]
         sum = 0
         for i in self.task_choices:
-            if len(weights) > i:
-                weight = weights[i]
-            else:
-                weight = 1
+            weight = weights[i] if len(weights) > i else 1
             self.cum_task_weights[i] = weight + sum
             sum += weight
         task_ids: Dict[str, Teacher] = {}
@@ -574,11 +556,7 @@ class MultiWorld(World):
             world_id = each_world.getID()
             if world_id in task_ids:
                 raise AssertionError(
-                    '{} and {} teachers have overlap in id {}.'.format(
-                        task_ids[world_id],
-                        each_world.get_agents()[0].__class__,
-                        world_id,
-                    )
+                    f'{task_ids[world_id]} and {each_world.get_agents()[0].__class__} teachers have overlap in id {world_id}.'
                 )
             else:
                 task_ids[world_id] = each_world.get_task_agent()
@@ -635,20 +613,17 @@ class MultiWorld(World):
         """
         Share all the subworlds.
         """
-        shared_data = {}
-        shared_data['world_class'] = type(self)
-        shared_data['opt'] = self.opt
-        shared_data['worlds'] = [w.share() for w in self.worlds]
-        return shared_data
+        return {
+            'world_class': type(self),
+            'opt': self.opt,
+            'worlds': [w.share() for w in self.worlds],
+        }
 
     def epoch_done(self):
         """
         Return if *all* the subworlds are done.
         """
-        for t in self.worlds:
-            if not t.epoch_done():
-                return False
-        return True
+        return all(t.epoch_done() for t in self.worlds)
 
     def parley_init(self):
         """
@@ -689,15 +664,14 @@ class MultiWorld(World):
         """
         Display all subworlds.
         """
-        if self.world_idx != -1:
-            s = ''
-            w = self.worlds[self.world_idx]
-            if self.parleys == 0:
-                s = '[world ' + str(self.world_idx) + ':' + w.getID() + ']\n'
-            s = s + w.display()
-            return s
-        else:
+        if self.world_idx == -1:
             return ''
+        s = ''
+        w = self.worlds[self.world_idx]
+        if self.parleys == 0:
+            s = f'[world {str(self.world_idx)}:{w.getID()}' + ']\n'
+        s += w.display()
+        return s
 
     def report(self):
         """
@@ -879,9 +853,9 @@ class BatchWorld(World):
         """
         Display the full batch.
         """
-        s = "[--batchsize " + str(len(self.worlds)) + "--]\n"
+        s = f"[--batchsize {len(self.worlds)}" + "--]\n"
         for i, w in enumerate(self.worlds):
-            s += "[batch world " + str(i) + ":]\n"
+            s += f"[batch world {str(i)}" + ":]\n"
             s += w.display() + '\n'
         s += "[--end of batch--]"
         return s
@@ -943,11 +917,7 @@ class BatchWorld(World):
         # first check parent world: if it says it's done, we're done
         if self.world.epoch_done():
             return True
-        # otherwise check if all shared worlds are done
-        for world in self.worlds:
-            if not world.epoch_done():
-                return False
-        return True
+        return all(world.epoch_done() for world in self.worlds)
 
     def report(self):
         """
@@ -1010,13 +980,7 @@ class DynamicBatchWorld(World):
             )
 
         # size of the buffer we will use to find worlds
-        if opt['dynamic_batching']:
-            self._BUFFER_SIZE = 1021  # chosen as a prime number
-        else:
-            # we're secretly running in vanilla BS mode, via background
-            # preprocessing
-            self._BUFFER_SIZE = opt['batchsize']
-
+        self._BUFFER_SIZE = 1021 if opt['dynamic_batching'] else opt['batchsize']
         if opt['dynamic_batching'] == 'full':
             # full dynamic batching, we can grow our batchsize
             self.max_batch_size = self._BUFFER_SIZE
@@ -1134,9 +1098,9 @@ class DynamicBatchWorld(World):
 
         # quick invariant checks
         assert (
-            len(indices) != 0 or self.world.num_examples() == 0
+            indices or self.world.num_examples() == 0
         ), "DynamicBatchWorld ran out of data!"
-        assert not any(self._scores[i] is None for i in indices)
+        assert all(self._scores[i] is not None for i in indices)
 
         if not indices:
             # this worker got no examples. This can happen when there are fewer
@@ -1173,16 +1137,15 @@ class DynamicBatchWorld(World):
             # compute the cost of the new batch
             new_bsz = len(batch) + 1
             new_words = new_width * new_bsz
-            if new_words <= self.max_words and new_bsz <= self.max_batch_size:
-                # cool, this one fits, let's add it
-                width = new_width
-                batch.append(index)
-                indices.pop(indices_idx)
-                indices_idx = max(indices_idx - 1, 0)
-            else:
+            if new_words > self.max_words or new_bsz > self.max_batch_size:
                 # we'd overfill our buffer, give up
                 break
 
+            # cool, this one fits, let's add it
+            width = new_width
+            batch.append(index)
+            indices.pop(indices_idx)
+            indices_idx = max(indices_idx - 1, 0)
         # Always have a batch size that's a multiple of 4, for fp16's sake.
         while len(batch) > 4 and len(batch) % 4 != 0:
             # pop off the shortest one. it's easiest to pack in later
@@ -1190,7 +1153,7 @@ class DynamicBatchWorld(World):
 
         # double check our assumed invariant
         assert self._ceil(width) * len(batch) <= self.max_words
-        assert len(batch) > 0
+        assert batch
         assert len(batch) <= self.max_batch_size
 
         # great, this batch is good to go! let's run it!
@@ -1218,8 +1181,7 @@ class DynamicBatchWorld(World):
         self.total_exs += len(batch)
 
     def handle_batch(self, batch):
-        acts = self.world.get_model_agent().batch_act(batch)
-        return acts
+        return self.world.get_model_agent().batch_act(batch)
 
     def get_total_exs(self):
         return self.total_exs
@@ -1343,7 +1305,7 @@ class BackgroundWorkerDynamicBatchWorld(DynamicBatchWorld):
 
             error = traceback.format_exc()
             logging.critical(
-                f'Exception on background preprocesser index {index}!\n' + error
+                f'Exception on background preprocesser index {index}!\n{error}'
             )
             raise
 
@@ -1356,8 +1318,7 @@ class BackgroundWorkerDynamicBatchWorld(DynamicBatchWorld):
     def handle_batch(self, batch):
         batchified = self.world.get_model_agent().batchify(batch)
         self.process_queue.put((self.index, batchified))
-        acts = [{} for i in batch]
-        return acts
+        return [{} for _ in batch]
 
 
 ################################################################################

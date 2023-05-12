@@ -103,10 +103,7 @@ class AgentState:
         :return:
             ChatServiceAgent object associated with the given task
         """
-        if self.has_task(task_id):
-            return self.task_id_to_agent[task_id]
-        else:
-            return None
+        return self.task_id_to_agent[task_id] if self.has_task(task_id) else None
 
     def assign_agent_to_task(self, agent: ChatServiceAgent, task_id: str):
         """
@@ -391,14 +388,16 @@ class ChatServiceManager(ABC):
             self.service_reference_id = message['recipient']['id']
 
         agent_id = message['sender']['id']
-        if self.opt['password'] is not None:
-            if message['text'] != self.opt['password']:
-                self.observe_message(
-                    agent_id,
-                    'Sorry, this conversation bot is password-protected. If '
-                    'you have the password, please send it now.',
-                )
-                return
+        if (
+            self.opt['password'] is not None
+            and message['text'] != self.opt['password']
+        ):
+            self.observe_message(
+                agent_id,
+                'Sorry, this conversation bot is password-protected. If '
+                'you have the password, please send it now.',
+            )
+            return
 
         self._launch_overworld(agent_id)
 
@@ -426,10 +425,10 @@ class ChatServiceManager(ABC):
         if agent_state.get_active_agent() is None:
             # return agent to overworld
             if message.get("text", "") and message['text'].upper() == 'EXIT':
-                # remove agent from agent_pool
-                to_remove = []
-                for world_type, _time in agent_state.time_in_pool.items():
-                    to_remove.append(world_type)
+                to_remove = [
+                    world_type
+                    for world_type, _time in agent_state.time_in_pool.items()
+                ]
                 for world_type in to_remove:
                     self.remove_agent_from_pool(
                         agent_state, world_type, mark_removed=False
@@ -461,7 +460,7 @@ class ChatServiceManager(ABC):
             Name of world whose pool should now contain agent
         """
         with self.agent_pool_change_condition:
-            self._log_debug('Adding agent {} to pool...'.format(agent.service_id))
+            self._log_debug(f'Adding agent {agent.service_id} to pool...')
             # time agent entered agent_pool
             agent.time_in_pool.setdefault(world_type, time.time())
             # add agent to pool
@@ -481,7 +480,7 @@ class ChatServiceManager(ABC):
             whether to mark an agent as removed from the pool
         """
         with self.agent_pool_change_condition:
-            self._log_debug('Removing agent {} from pool...'.format(agent.service_id))
+            self._log_debug(f'Removing agent {agent.service_id} from pool...')
             if world_type in self.agent_pool and agent in self.agent_pool[world_type]:
                 self.agent_pool[world_type].remove(agent)
                 # reset agent's time_in_pool
@@ -520,9 +519,8 @@ class ChatServiceManager(ABC):
             possible, else None
         """
         agent_state = self.get_agent_state(agent_id)
-        if agent_state is not None:
-            if agent_state.has_task(task_id):
-                return agent_state.get_agent_for_task(task_id)
+        if agent_state is not None and agent_state.has_task(task_id):
+            return agent_state.get_agent_for_task(task_id)
         return None
 
     def get_agent_state(self, agent_id: int) -> Optional[AgentState]:
@@ -569,7 +567,7 @@ class ChatServiceManager(ABC):
         Begin new run.
         """
         self.run_id = str(int(time.time()))
-        self.task_group_id = '{}_{}'.format(self.opt['task'], self.run_id)
+        self.task_group_id = f"{self.opt['task']}_{self.run_id}"
 
     def check_timeout_in_pool(
         self,
@@ -715,10 +713,10 @@ class ChatServiceManager(ABC):
                         )
                         # enough agents in pool to start new conversation
                         self.conversation_index += 1
-                        task_id = 't_{}'.format(self.conversation_index)
+                        task_id = f't_{self.conversation_index}'
 
                         # Add the required number of valid agents to the conv
-                        agent_states = [w for w in agent_pool[:needed_agents]]
+                        agent_states = list(agent_pool[:needed_agents])
                         agents = []
                         for state in agent_states:
                             agent = self._create_agent(task_id, state.get_id())

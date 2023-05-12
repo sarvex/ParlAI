@@ -42,10 +42,9 @@ def reduce_ctxt(
         return ctxt.max(dim=1)[0]
     elif reduction_type == 'mean':
         divisor = mask.float().sum(dim=1).unsqueeze(-1).clamp(min=1).type_as(ctxt)
-        output = ctxt.sum(dim=1) / divisor
-        return output
+        return ctxt.sum(dim=1) / divisor
     else:
-        raise ValueError("Can't handle --reduction-type {}".format(reduction_type))
+        raise ValueError(f"Can't handle --reduction-type {reduction_type}")
 
 
 class DropoutPolyAgent(PolyencoderAgent):
@@ -117,15 +116,13 @@ class DropoutPolyAgent(PolyencoderAgent):
         During training, with some probability we fall back to the Bi-encoder scoring
         method.
         """
-        if self.is_training and random.random() < self.poly_dropout_prob:
-            ctxt_rep = reduce_ctxt(
-                ctxt_rep, ctxt_rep_mask, self.poly_dropout_reduction_type
-            )
-            scores = torch.bmm(ctxt_rep.unsqueeze(1), cand_rep.transpose(1, 2)).squeeze(
-                1
-            )
-        else:
-            scores = self.model(
+        if not self.is_training or random.random() >= self.poly_dropout_prob:
+            return self.model(
                 ctxt_rep=ctxt_rep, ctxt_rep_mask=ctxt_rep_mask, cand_rep=cand_rep
             )
-        return scores
+        ctxt_rep = reduce_ctxt(
+            ctxt_rep, ctxt_rep_mask, self.poly_dropout_reduction_type
+        )
+        return torch.bmm(ctxt_rep.unsqueeze(1), cand_rep.transpose(1, 2)).squeeze(
+            1
+        )

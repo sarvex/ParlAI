@@ -37,12 +37,11 @@ def _adversarial_dialogue_datapath(opt: Opt) -> str:
     build_dialogue_datasets(opt)
     # Build the data if it doesn't exist.
     dt = opt['datatype'].split(':')[0]
-    data_path = os.path.join(
+    return os.path.join(
         get_adversarial_dialogue_folder(opt['datapath']),
         'bot_adversarial_dialogue_datasets_with_persona',
-        dt + '.txt',
+        f'{dt}.txt',
     )
-    return data_path
 
 
 class BotAdversarialDialogueTeacher(ParlAIDialogTeacher):
@@ -87,13 +86,7 @@ class BotAdversarialDialogueTeacher(ParlAIDialogTeacher):
     def __init__(self, opt, shared=None):
         opt['parlaidialogteacher_datafile'] = _adversarial_dialogue_datapath(opt=opt)
         super().__init__(opt, shared=shared)
-        self.id = '{}.numTurns_{}_speakerToEval_{}_safetyMix_{}_persona_{}'.format(
-            self.id,
-            self.opt['bad_num_turns'],
-            self.opt['bad_speaker_to_eval'],
-            self.opt['bad_safety_mix'],
-            self.opt['bad_include_persona'],
-        )
+        self.id = f"{self.id}.numTurns_{self.opt['bad_num_turns']}_speakerToEval_{self.opt['bad_speaker_to_eval']}_safetyMix_{self.opt['bad_safety_mix']}_persona_{self.opt['bad_include_persona']}"
 
     def _setup_data(self, path):
         logging.info(f"Loading ParlAI text data: {path}")
@@ -124,10 +117,10 @@ class BotAdversarialDialogueTeacher(ParlAIDialogTeacher):
                         f'The line is:\n\t{line}'
                     )
 
-                if (
-                    self.opt['bad_speaker_to_eval'] != 'all'
-                    and self.opt['bad_speaker_to_eval'] != msg['speaker_to_eval']
-                ):
+                if self.opt['bad_speaker_to_eval'] not in [
+                    'all',
+                    msg['speaker_to_eval'],
+                ]:
                     continue
                 if (
                     self.opt['bad_safety_mix'] != 'all'
@@ -136,10 +129,12 @@ class BotAdversarialDialogueTeacher(ParlAIDialogTeacher):
                     continue
                 msg_text = msg['text']
                 dialog = msg_text.split('\n')
-                if self.opt['bad_include_persona'] and msg['speaker_to_eval'] == 'bot':
-                    # only display persona if it's asked to and if the last turn is bot.
-                    if len(msg['bot_persona'].strip()) > 0:
-                        dialog[0] = msg['bot_persona'] + '\n' + dialog[0]
+                if (
+                    self.opt['bad_include_persona']
+                    and msg['speaker_to_eval'] == 'bot'
+                    and len(msg['bot_persona'].strip()) > 0
+                ):
+                    dialog[0] = msg['bot_persona'] + '\n' + dialog[0]
                 if self.opt['bad_num_turns'] > 0:
                     msg_text = '\n'.join(dialog[-self.opt['bad_num_turns'] :])
                 else:
@@ -174,10 +169,11 @@ def _human_safety_eval_datapath(opt: Opt) -> str:
         f'WARNING: The data for human safety evaluation is test set only '
         f'regardless of your chosen datatype, which is {opt["datatype"]} '
     )
-    data_path = os.path.join(
-        get_human_safety_eval_folder(opt['datapath']), 'human_safety_eval', 'test.txt'
+    return os.path.join(
+        get_human_safety_eval_folder(opt['datapath']),
+        'human_safety_eval',
+        'test.txt',
     )
-    return data_path
 
 
 class HumanSafetyEvaluationTeacher(ParlAIDialogTeacher):
@@ -210,9 +206,7 @@ class HumanSafetyEvaluationTeacher(ParlAIDialogTeacher):
     def __init__(self, opt, shared=None):
         opt['parlaidialogteacher_datafile'] = _human_safety_eval_datapath(opt=opt)
         super().__init__(opt, shared=shared)
-        self.id = '{}.persona_{}_flatten_{}'.format(
-            self.id, self.opt['bad_include_persona'], self.opt['flatten_dialogue']
-        )
+        self.id = f"{self.id}.persona_{self.opt['bad_include_persona']}_flatten_{self.opt['flatten_dialogue']}"
 
     def _setup_data(self, path):
         super()._setup_data(path)
@@ -258,12 +252,11 @@ def _human_nonadv_safety_eval_datapath(opt: Opt) -> str:
         f'The data for human non-adversarial safety evaluation is test set only '
         f'regardless of your chosen datatype, which is {opt["datatype"]} '
     )
-    data_path = os.path.join(
+    return os.path.join(
         get_human_nonadv_safety_eval_folder(opt['datapath']),
         'human_nonadv_safety_eval',
         'test.txt',
     )
-    return data_path
 
 
 class HumanNonadvSafetyEvaluationTeacher(ParlAIDialogTeacher):

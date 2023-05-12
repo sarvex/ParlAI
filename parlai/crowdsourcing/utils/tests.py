@@ -82,22 +82,24 @@ class AbstractCrowdsourcingTest:
         with initialize(config_path=relative_config_path):
             self.config = compose(
                 config_name="example",
-                overrides=[
-                    f'+mephisto.blueprint._blueprint_type={blueprint_type}',
-                    f'+mephisto/architect=mock',
-                    f'+mephisto/provider=mock',
-                    f'+task_dir={task_directory}',
-                    f'+current_time={int(time.time())}',
-                ]
-                + overrides,
+                overrides=(
+                    [
+                        f'+mephisto.blueprint._blueprint_type={blueprint_type}',
+                        '+mephisto/architect=mock',
+                        '+mephisto/provider=mock',
+                        f'+task_dir={task_directory}',
+                        f'+current_time={int(time.time())}',
+                    ]
+                    + overrides
+                ),
             )
-            # TODO: when Hydra 1.1 is released with support for recursive defaults,
-            #  don't manually specify all missing blueprint args anymore, but
-            #  instead define the blueprint in the defaults list directly.
-            #  Currently, the blueprint can't be set in the defaults list without
-            #  overriding params in the YAML file, as documented at
-            #  https://github.com/facebookresearch/hydra/issues/326 and as fixed in
-            #  https://github.com/facebookresearch/hydra/pull/1044.
+                # TODO: when Hydra 1.1 is released with support for recursive defaults,
+                #  don't manually specify all missing blueprint args anymore, but
+                #  instead define the blueprint in the defaults list directly.
+                #  Currently, the blueprint can't be set in the defaults list without
+                #  overriding params in the YAML file, as documented at
+                #  https://github.com/facebookresearch/hydra/issues/326 and as fixed in
+                #  https://github.com/facebookresearch/hydra/pull/1044.
 
         self.data_dir = tempfile.mkdtemp()
         self.database_path = os.path.join(self.data_dir, "mephisto.db")
@@ -119,8 +121,7 @@ class AbstractCrowdsourcingTest:
         """
         Return channel info for the currently running job.
         """
-        channels = list(self.operator.supervisor.channels.values())
-        if len(channels) > 0:
+        if channels := list(self.operator.supervisor.channels.values()):
             return channels[0]
         else:
             raise ValueError('No channel could be detected!')
@@ -132,11 +133,11 @@ class AbstractCrowdsourcingTest:
         Specify the number of agents to register. Return the agents' IDs after creation.
         """
 
+        max_num_tries = 6
+        initial_wait_time = 0.5  # In seconds
         for idx in range(num_agents):
 
             mock_worker_name = f"MOCK_WORKER_{idx:d}"
-            max_num_tries = 6
-            initial_wait_time = 0.5  # In seconds
             num_tries = 0
             wait_time = initial_wait_time
             while num_tries < max_num_tries:
@@ -173,9 +174,7 @@ class AbstractCrowdsourcingTest:
                 f'The actual number of agents is {len(agents):d} instead of the '
                 f'desired {num_agents:d}!'
             )
-        agent_ids = [agent.db_id for agent in agents]
-
-        return agent_ids
+        return [agent.db_id for agent in agents]
 
 
 class AbstractOneTurnCrowdsourcingTest(AbstractCrowdsourcingTest):
@@ -256,10 +255,9 @@ class AbstractParlAIChatTest(AbstractCrowdsourcingTest):
 
         # If no task data was supplied, create empty task data
         if agent_task_data is None:
-            agent_task_data = []
-            for message_round in agent_messages:
-                agent_task_data.append([{}] * len(message_round))
-
+            agent_task_data = [
+                [{}] * len(message_round) for message_round in agent_messages
+            ]
         # Set up the mock human agents
         agent_ids = self._register_mock_agents(num_agents=num_agents)
 
@@ -322,16 +320,15 @@ class AbstractParlAIChatTest(AbstractCrowdsourcingTest):
             )
             if expected_num_messages == actual_num_messages:
                 break
-            else:
-                num_tries += 1
-                print(
-                    f'The expected number of messages is '
-                    f'{expected_num_messages:d}, but the actual number of messages '
-                    f'is {actual_num_messages:d}! Waiting for {wait_time:0.1f} seconds '
-                    f'for more messages to arrive (try #{num_tries:d} of '
-                    f'{max_num_tries:d})...'
-                )
-                time.sleep(wait_time)
+            num_tries += 1
+            print(
+                f'The expected number of messages is '
+                f'{expected_num_messages:d}, but the actual number of messages '
+                f'is {actual_num_messages:d}! Waiting for {wait_time:0.1f} seconds '
+                f'for more messages to arrive (try #{num_tries:d} of '
+                f'{max_num_tries:d})...'
+            )
+            time.sleep(wait_time)
         else:
             actual_num_messages = sum(
                 len(state['outputs']['messages']) for state in actual_states
@@ -374,25 +371,24 @@ class AbstractParlAIChatTest(AbstractCrowdsourcingTest):
         This function can be extended to handle special cases for subclassed Mephisto
         tasks.
         """
-        if key == 'timestamp':
-            pass  # The timestamp will obviously be different
-        elif key == 'data':
+        if key == 'data':
             for key_inner, expected_value_inner in expected_value.items():
-                if key_inner in ['beam_texts', 'message_id']:
-                    pass  # The message ID will be different
-                else:
-                    if actual_value[key_inner] != expected_value_inner:
-                        raise ValueError(
-                            f'The value of ["{key}"]["{key_inner}"] is supposed to be '
-                            f'{expected_value_inner} but is actually '
-                            f'{actual_value[key_inner]}!'
-                        )
-        else:
-            if actual_value != expected_value:
-                raise ValueError(
-                    f'The value of ["{key}"] is supposed to be {expected_value} but is '
-                    f'actually {actual_value}!'
-                )
+                if (
+                    key_inner not in ['beam_texts', 'message_id']
+                    and actual_value[key_inner] != expected_value_inner
+                ):
+                    raise ValueError(
+                        f'The value of ["{key}"]["{key_inner}"] is supposed to be '
+                        f'{expected_value_inner} but is actually '
+                        f'{actual_value[key_inner]}!'
+                    )
+        elif key == 'timestamp':
+            pass
+        elif actual_value != expected_value:
+            raise ValueError(
+                f'The value of ["{key}"] is supposed to be {expected_value} but is '
+                f'actually {actual_value}!'
+            )
 
     def _send_agent_message(
         self, agent_id: str, agent_display_id: str, text: str, task_data: Dict[str, Any]
@@ -426,7 +422,10 @@ def check_stdout(actual_stdout: str, expected_stdout_path: str):
     with open(expected_stdout_path) as f:
         expected_stdout = f.read()
     for expected_line in expected_stdout.split('\n'):
-        if not any(expected_line in actual_line for actual_line in actual_stdout_lines):
+        if all(
+            expected_line not in actual_line
+            for actual_line in actual_stdout_lines
+        ):
             raise ValueError(
                 f'\n\tThe following line:\n\n{expected_line}\n\n\twas not found '
                 f'in the actual stdout:\n\n{actual_stdout}'

@@ -59,10 +59,7 @@ class UnigramAgent(Agent):
         self.opt = opt
         self.num_words = opt['num_words']
 
-        if shared is not None:
-            self.dict = shared['dict']
-        else:
-            self.dict = self.dictionary_class()(opt)
+        self.dict = self.dictionary_class()(opt) if shared is None else shared['dict']
 
     def share(self):
         """
@@ -119,7 +116,7 @@ class UnigramAgent(Agent):
         with PathManager.open(path, 'w') as f:
             f.write(self.get_prediction() + '\n')
 
-        with PathManager.open(path + '.opt', 'w') as f:
+        with PathManager.open(f'{path}.opt', 'w') as f:
             json.dump(self.opt, f)
 
     def load(self, path):

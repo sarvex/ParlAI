@@ -309,20 +309,19 @@ class RagRetrieverTokenizer:
         :return encoding:
             return encoded text.
         """
-        if self.query_model in ['bert', 'bert_from_parlai_rag']:
-            txt = txt.lower().strip()
-            if txt_pair:
-                txt_pair = txt_pair.lower().strip()
-            return self.tokenizer.encode(
-                txt,
-                text_pair=txt_pair,
-                add_special_tokens=True,
-                max_length=self.max_length,
-                pad_to_max_length=False,
-                truncation='longest_first',
-            )
-        else:
+        if self.query_model not in ['bert', 'bert_from_parlai_rag']:
             return self.tokenizer.txt2vec(txt)
+        txt = txt.lower().strip()
+        if txt_pair:
+            txt_pair = txt_pair.lower().strip()
+        return self.tokenizer.encode(
+            txt,
+            text_pair=txt_pair,
+            add_special_tokens=True,
+            max_length=self.max_length,
+            pad_to_max_length=False,
+            truncation='longest_first',
+        )
 
     def decode(self, vec: torch.LongTensor) -> str:
         """
@@ -599,7 +598,7 @@ class DPRRetriever(RagRetriever):
                 )
             self.indexer.deserialize_from(index_path, embeddings_path)
             self.passages = load_passages_dict(passages_path)
-        elif shared:
+        else:
             self.indexer = shared['indexer']
             self.passages = shared['passages']
 
@@ -946,10 +945,9 @@ class DPRThenPolyRetriever(DPRThenTorchReranker):
 
         ctxt_rep, ctxt_rep_mask, _ = self.polyencoder(ctxt_tokens=poly_query_vec)
         _, _, cand_rep = self.polyencoder(cand_tokens=doc_vecs)
-        scores = self.polyencoder(
+        return self.polyencoder(
             ctxt_rep=ctxt_rep, ctxt_rep_mask=ctxt_rep_mask, cand_rep=cand_rep
         )
-        return scores
 
 
 class PolyFaissRetriever(DPRThenPolyRetriever):
@@ -988,10 +986,7 @@ class RagTfidfRetrieverAgent(TfidfRetrieverAgent):
 
     def __init__(self, opt: Opt, shared: TShared = None):
         super().__init__(opt, shared)
-        if not shared:
-            self.docid_to_text = {}
-        else:
-            self.docid_to_text = shared.get('docid_to_text', {})
+        self.docid_to_text = {} if not shared else shared.get('docid_to_text', {})
 
     def share(self) -> TShared:
         shared = super().share()

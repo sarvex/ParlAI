@@ -124,7 +124,7 @@ def _save_eval_stats(opt, report):
         report_fname = opt['model_file'] + report_fname
 
     json_serializable_report = report
-    for k, v in report.items():
+    for k, v in json_serializable_report.items():
         if isinstance(v, Metric):
             v = v.value()
         json_serializable_report[k] = v
@@ -139,9 +139,8 @@ def _save_eval_stats(opt, report):
 def get_task_world_logs(task, world_logs, is_multitask=False):
     if not is_multitask:
         return world_logs
-    else:
-        base_outfile, extension = os.path.splitext(world_logs)
-        return f'{base_outfile}_{task}{extension}'
+    base_outfile, extension = os.path.splitext(world_logs)
+    return f'{base_outfile}_{task}{extension}'
 
 
 def _eval_single_world(opt, agent, task):
@@ -194,7 +193,7 @@ def _eval_single_world(opt, agent, task):
         if is_distributed():
             rank = get_rank()
             base_outfile, extension = os.path.splitext(task_opt['world_logs'])
-            outfile = base_outfile + f'_{rank}' + extension
+            outfile = f'{base_outfile}_{rank}{extension}'
         else:
             outfile = task_opt['world_logs']
         world_logger.write(outfile, world, file_format=opt['save_format'])

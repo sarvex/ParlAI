@@ -117,16 +117,14 @@ def built(path, version_string=None):
     If a version_string is provided, this has to match, or the version is regarded as
     not built.
     """
-    if version_string:
-        fname = os.path.join(path, '.built')
-        if not PathManager.exists(fname):
-            return False
-        else:
-            with PathManager.open(fname, 'r') as read:
-                text = read.read().split('\n')
-            return len(text) > 1 and text[1] == version_string
-    else:
+    if not version_string:
         return PathManager.exists(os.path.join(path, '.built'))
+    fname = os.path.join(path, '.built')
+    if not PathManager.exists(fname):
+        return False
+    with PathManager.open(fname, 'r') as read:
+        text = read.read().split('\n')
+    return len(text) > 1 and text[1] == version_string
 
 
 def mark_done(path, version_string=None):
@@ -143,7 +141,7 @@ def mark_done(path, version_string=None):
         The version of this dataset.
     """
     with PathManager.open(os.path.join(path, '.built'), 'w') as write:
-        write.write(str(datetime.datetime.today()))
+        write.write(str(datetime.datetime.now()))
         if version_string:
             write.write('\n' + version_string)
 
@@ -161,7 +159,7 @@ def download(url, path, fname, redownload=False, num_retries=5):
     retry = num_retries
     exp_backoff = [2 ** r for r in reversed(range(retry))]
 
-    pbar = tqdm.tqdm(unit='B', unit_scale=True, desc='Downloading {}'.format(fname))
+    pbar = tqdm.tqdm(unit='B', unit_scale=True, desc=f'Downloading {fname}')
 
     while download and retry > 0:
         response = None
@@ -209,7 +207,7 @@ def download(url, path, fname, redownload=False, num_retries=5):
     if retry <= 0:
         raise RuntimeError('Connection broken too many times. Stopped retrying.')
 
-    if download and retry > 0:
+    if download:
         pbar.update(done - pbar.n)
         if done < total_size:
             raise RuntimeError(
@@ -377,10 +375,14 @@ def _unzip(path, fname, delete=True):
 
 
 def _get_confirm_token(response):
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            return value
-    return None
+    return next(
+        (
+            value
+            for key, value in response.cookies.items()
+            if key.startswith('download_warning')
+        ),
+        None,
+    )
 
 
 def download_from_google_drive(gd_id, destination):
@@ -391,9 +393,7 @@ def download_from_google_drive(gd_id, destination):
 
     with requests.Session() as session:
         response = session.get(URL, params={'id': gd_id}, stream=True)
-        token = _get_confirm_token(response)
-
-        if token:
+        if token := _get_confirm_token(response):
             response.close()
             params = {'id': gd_id, 'confirm': token}
             response = session.get(URL, params=params, stream=True)
@@ -445,12 +445,12 @@ def download_models(
         for fname in fnames:
             if path == 'aws':
                 url = 'http://parl.ai/downloads/_models/'
-                url += model_folder + '/'
+                url += f'{model_folder}/'
                 if use_model_type:
-                    url += model_type + '/'
+                    url += f'{model_type}/'
                 url += fname
             else:
-                url = path + '/' + fname
+                url = f'{path}/{fname}'
             download(url, dpath, fname)
             if '.tgz' in fname or '.gz' in fname or '.zip' in fname:
                 untar(dpath, fname, flatten_tar=flatten_tar)
@@ -485,7 +485,7 @@ def modelzoo_path(datapath, path):
             animal = path[zoo_len:]
         if '.' not in animal:
             animal += '.build'
-        module_name = 'parlai.zoo.{}'.format(animal)
+        module_name = f'parlai.zoo.{animal}'
         try:
             my_module = importlib.import_module(module_name)
             my_module.download(datapath)
@@ -493,7 +493,7 @@ def modelzoo_path(datapath, path):
             try:
                 # maybe we didn't find a specific model, let's try generic .build
                 animal_ = '.'.join(animal.split(".")[:-1]) + '.build'
-                module_name_ = 'parlai.zoo.{}'.format(animal_)
+                module_name_ = f'parlai.zoo.{animal_}'
                 my_module = importlib.import_module(module_name_)
                 my_module.download(datapath)
             except (ImportError, AttributeError) as exc:
@@ -505,21 +505,20 @@ def modelzoo_path(datapath, path):
 
         return os.path.join(datapath, 'models', model_path)
     else:
-        # Internal path (starts with "izoo:") -- useful for non-public
-        # projects.  Save the path to your internal model zoo in
-        # parlai_internal/.internal_zoo_path
-        # TODO: test the internal zoo.
-        zoo_path = 'parlai_internal/zoo/.internal_zoo_path'
         if not PathManager.exists('parlai_internal/zoo/.internal_zoo_path'):
             raise RuntimeError(
                 'Please specify the path to your internal zoo in the '
                 'file parlai_internal/zoo/.internal_zoo_path in your '
                 'internal repository.'
             )
-        else:
-            with PathManager.open(zoo_path, 'r') as f:
-                zoo = f.read().split('\n')[0]
-            return os.path.join(zoo, path[5:])
+        # Internal path (starts with "izoo:") -- useful for non-public
+        # projects.  Save the path to your internal model zoo in
+        # parlai_internal/.internal_zoo_path
+        # TODO: test the internal zoo.
+        zoo_path = 'parlai_internal/zoo/.internal_zoo_path'
+        with PathManager.open(zoo_path, 'r') as f:
+            zoo = f.read().split('\n')[0]
+        return os.path.join(zoo, path[5:])
 
 
 def download_multiprocess(
@@ -611,7 +610,7 @@ def download_multiprocess(
     if error_path:
         now = time.strftime("%Y%m%d-%H%M%S")
         error_filename = os.path.join(
-            error_path, 'parlai_download_multiprocess_errors_%s.log' % now
+            error_path, f'parlai_download_multiprocess_errors_{now}.log'
         )
 
         with PathManager.open(os.path.join(error_filename), 'w') as error_file:
@@ -672,7 +671,7 @@ def _download_multiprocess_single(url, path, dest_fname):
     except Exception as e:
         # Likely a timeout during fetching but had an error in requests.get()
         status = 500
-        error_msg = '[Exception during download during fetching] ' + str(e)
+        error_msg = f'[Exception during download during fetching] {str(e)}'
         return dest_fname, status, error_msg
 
     if response.ok:
@@ -685,11 +684,11 @@ def _download_multiprocess_single(url, path, dest_fname):
         except Exception as e:
             # Likely a timeout during download or decoding
             status = 500
-            error_msg = '[Exception during decoding or writing] ' + str(e)
+            error_msg = f'[Exception during decoding or writing] {str(e)}'
     else:
         # We get here if there is an HTML error page (i.e. a page saying "404
         # not found" or anything else)
         status = response.status_code
-        error_msg = '[Response not OK] Response: %s' % response
+        error_msg = f'[Response not OK] Response: {response}'
 
     return dest_fname, status, error_msg

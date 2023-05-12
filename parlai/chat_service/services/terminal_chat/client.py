@@ -32,7 +32,7 @@ def _prBlueBG(text):
 
     :param text: The text to be printed
     """
-    print("\033[44m{}\033[0m".format(text), sep="")
+    print(f"\033[44m{text}\033[0m", sep="")
 
 
 def on_message(ws, message):
@@ -84,9 +84,7 @@ def _run(ws, id):
     while True:
         x = input("\033[44m Me: ")
         print("\033[0m", end="")
-        data = {}
-        data['id'] = id
-        data['text'] = x
+        data = {'id': id, 'text': x}
         if x == "[DONE]":
             RUNNING = False
         json_data = json.dumps(data)
@@ -129,7 +127,7 @@ if __name__ == "__main__":
     port = opt.get('port', 34596)
     print("Connecting to port: ", port)
     ws = websocket.WebSocketApp(
-        "ws://localhost:{}/websocket".format(port),
+        f"ws://localhost:{port}/websocket",
         on_message=on_message,
         on_error=on_error,
         on_close=on_close,

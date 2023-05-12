@@ -110,14 +110,12 @@ class MessengerManager(ChatServiceManager):
     def _confirm_message_delivery(self, event):
         # By default we don't actually do anything when messages are marked as
         # being delivered, but we expose the ability for others to
-        self._log_debug(
-            'Messages {} marked as received.'.format(event['delivery']['mids'])
-        )
+        self._log_debug(f"Messages {event['delivery']['mids']} marked as received.")
 
     def _handle_message_read(self, event):
         # If the message was sent by another user (as in during a conversation)
         # then we need to propogate the read back to that user.
-        self._log_debug('Messages {} marked as read.'.format(event['read']))
+        self._log_debug(f"Messages {event['read']} marked as read.")
         super()._handle_message_read(event)
 
     def _handle_webhook_event(self, event):
@@ -161,9 +159,7 @@ class MessengerManager(ChatServiceManager):
         """
         log_utils.print_and_log(
             logging.WARN,
-            'Expected to have an agent for {}_{}, yet none was found'.format(
-                agent_id, assignment_id
-            ),
+            f'Expected to have an agent for {agent_id}_{assignment_id}, yet none was found',
         )
 
     # Manager Lifecycle Functions #
@@ -203,7 +199,7 @@ class MessengerManager(ChatServiceManager):
         )
 
         # Setup the server with a task name related to the current task
-        task_name = '{}-{}'.format('ParlAI-Messenger', self.opt['task'])
+        task_name = f"ParlAI-Messenger-{self.opt['task']}"
         self.server_task_name = ''.join(
             e for e in task_name.lower() if e.isalnum() or e == '-'
         )
@@ -212,7 +208,7 @@ class MessengerManager(ChatServiceManager):
         )
         log_utils.print_and_log(
             logging.INFO,
-            'Webhook address: {}/webhook'.format(self.server_url),
+            f'Webhook address: {self.server_url}/webhook',
             should_print=True,
         )
 
@@ -255,10 +251,7 @@ class MessengerManager(ChatServiceManager):
         self.app_token = self.get_app_token()
         self.sender = MessageSender(self.app_token)
 
-        # Set up receive
-        socket_use_url = self.server_url
-        if self.opt['local']:  # skip some hops for local stuff
-            socket_use_url = 'https://localhost'
+        socket_use_url = 'https://localhost' if self.opt['local'] else self.server_url
         self.socket = ChatServiceMessageSocket(
             socket_use_url, self.port, self._handle_webhook_event
         )

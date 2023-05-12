@@ -96,8 +96,7 @@ class ParlAILRScheduler(object):
         start = self.warmup_rate
         end = 1.0
         progress = min(1.0, step / self.warmup_updates)
-        lr_mult = start + (end - start) * progress
-        return lr_mult
+        return start + (end - start) * progress
 
     def load_state(self, states):
         """
@@ -275,9 +274,7 @@ class ParlAILRScheduler(object):
             )
         else:
             raise ValueError(
-                "Don't know what to do with --lr-scheduler '{}'".format(
-                    opt.get('lr_scheduler')
-                )
+                f"Don't know what to do with --lr-scheduler '{opt.get('lr_scheduler')}'"
             )
 
         # time to load LR state from the checkpoint, if possible.
@@ -512,9 +509,7 @@ class LinearLRScheduler(ParlAILRScheduler):
         self.scheduler = optim.lr_scheduler.LambdaLR(optimizer, self._linear_lr)
 
     def _linear_lr(self, step):
-        # this multiplicative factor ensures linear decay rate
-        lr_mult = max(0.0, 1.0 - step / self.max_lr_steps)
-        return lr_mult
+        return max(0.0, 1.0 - step / self.max_lr_steps)
 
     def train_step(self, scheduler_steps):
         if scheduler_steps >= self.max_lr_steps:

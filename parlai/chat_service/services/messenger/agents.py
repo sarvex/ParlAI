@@ -34,10 +34,7 @@ class MessengerAgent(ChatServiceAgent):
                 act.get('persona_id', None),
             )
         else:
-            if act['id'] != '':
-                msg = '{}: {}'.format(act['id'], act['text'])
-            else:
-                msg = act['text']
+            msg = f"{act['id']}: {act['text']}" if act['id'] != '' else act['text']
             resp = self.manager.observe_message(
                 self.id,
                 msg,
@@ -49,7 +46,7 @@ class MessengerAgent(ChatServiceAgent):
             if mid not in self.observed_packets:
                 self.observed_packets[mid] = act
         except Exception:
-            print('{} could not be extracted to an observed message'.format(resp))
+            print(f'{resp} could not be extracted to an observed message')
 
     def observe_typing_on(self, persona_id=None):
         """
@@ -78,7 +75,7 @@ class MessengerAgent(ChatServiceAgent):
         seq = messenger_data['message'].get('seq', None)
         message = messenger_data['message']
         if 'text' not in message:
-            print('Msg: {} could not be extracted to text format'.format(message))
+            print(f'Msg: {message} could not be extracted to text format')
         text = message.get('text', None)
         img_attempt = self._is_image_attempt(message)
         if mid not in self.acted_packets:
@@ -118,10 +115,8 @@ class MessengerAgent(ChatServiceAgent):
             self.message_request_time = time.time()
 
         # If checking timeouts
-        if timeout:
-            # If time is exceeded, timeout
-            if time.time() - self.message_request_time > timeout:
-                return self.mark_inactive()
+        if timeout and time.time() - self.message_request_time > timeout:
+            return self.mark_inactive()
 
         # Get a new message, if it's not None reset the timeout
         msg = self.get_new_act_message()
@@ -143,8 +138,8 @@ class MessengerAgent(ChatServiceAgent):
                 # Do not allow agent to send empty strings
                 msg = None
 
-            if msg is not None and self.message_request_time is not None:
-                self.message_request_time = None
+        if msg is not None and self.message_request_time is not None:
+            self.message_request_time = None
         return msg
 
     def shutdown(self):

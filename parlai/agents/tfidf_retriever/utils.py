@@ -32,7 +32,7 @@ def save_sparse_csr(filename, matrix, metadata=None):
 
 
 def load_sparse_csr(filename):
-    loader = np.load(filename + '.npz', allow_pickle=True)
+    loader = np.load(f'{filename}.npz', allow_pickle=True)
     matrix = sp.csr_matrix(
         (loader['data'], loader['indices'], loader['indptr']), shape=loader['shape']
     )
@@ -226,9 +226,7 @@ def normalize(text):
     """
     Resolve different type of unicode encodings.
     """
-    if type(text) != str:
-        return text
-    return unicodedata.normalize('NFD', text)
+    return text if type(text) != str else unicodedata.normalize('NFD', text)
 
 
 def filter_word(text):
@@ -236,11 +234,7 @@ def filter_word(text):
     Take out english stopwords, punctuation, and compound endings.
     """
     text = normalize(text)
-    if regex.match(r'^\p{P}+$', text):
-        return True
-    if text.lower() in STOPWORDS:
-        return True
-    return False
+    return True if regex.match(r'^\p{P}+$', text) else text.lower() in STOPWORDS
 
 
 def filter_ngram(gram, mode='any'):

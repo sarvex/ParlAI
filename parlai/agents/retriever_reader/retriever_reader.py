@@ -105,9 +105,8 @@ class RetrieverReaderAgent(Agent):
                 act_reader = self.reader.act()
                 act_reader['paragraph'] = para
                 reader_acts.append(act_reader)
-        if len(reader_acts) > 0:
-            best_act = max(reader_acts, key=lambda x: x['candidate_scores'][0])
-        else:
-            best_act = {'id': self.getID()}
-
-        return best_act
+        return (
+            max(reader_acts, key=lambda x: x['candidate_scores'][0])
+            if reader_acts
+            else {'id': self.getID()}
+        )

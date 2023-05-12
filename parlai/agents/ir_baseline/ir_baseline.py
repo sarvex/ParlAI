@@ -113,7 +113,6 @@ stopwords = {
     '?',
     '.',
     "''",
-    "''",
     "``",
     ',',
     'do',
@@ -167,7 +166,7 @@ def score_match(query_rep, text, length_penalty, dictionary=None):
     """
     if text == "":
         return 0
-    words = [w for w in dictionary.tokenize(text.lower())]
+    words = list(dictionary.tokenize(text.lower()))
     score = 0
     rw = query_rep['words']
     used = {}
@@ -198,22 +197,11 @@ def rank_candidates(query_rep, cands, length_penalty, dictionary):
     :returns:
         ordered list of candidate strings in score-ranked order
     """
-    if True:
-        mpq = MaxPriorityQueue(100)
-        for c in cands:
-            score = score_match(query_rep, c, length_penalty, dictionary)
-            mpq.add(c, score)
-        return list(reversed(mpq))
-    else:
-        cands = list(cands)
-        score = [0] * len(cands)
-        for i, c in enumerate(cands):
-            score[i] = -score_match(query_rep, c, length_penalty, dictionary)
-        r = [i[0] for i in sorted(enumerate(score), key=lambda x: x[1])]
-        res = []
-        for i in range(min(100, len(score))):
-            res.append(cands[r[i]])
-        return res
+    mpq = MaxPriorityQueue(100)
+    for c in cands:
+        score = score_match(query_rep, c, length_penalty, dictionary)
+        mpq.add(c, score)
+    return list(reversed(mpq))
 
 
 class IrBaselineAgent(Agent):
@@ -301,9 +289,7 @@ class IrBaselineAgent(Agent):
             self.dictionary.act()
 
         obs = self.observation
-        reply = {}
-        reply['id'] = self.getID()
-
+        reply = {'id': self.getID()}
         # Rank candidates
         cands = None
         if obs.get('label_candidates', False) and len(obs['label_candidates']) > 0:
@@ -314,7 +300,7 @@ class IrBaselineAgent(Agent):
         if cands:
             hist_sz = self.opt.get('history_size', 1)
             left_idx = max(0, len(self.history) - hist_sz)
-            text = ' '.join(self.history[left_idx : len(self.history)])
+            text = ' '.join(self.history[left_idx:])
             rep = self.build_query_representation(text)
             reply['text_candidates'] = rank_candidates(
                 rep, cands, self.length_penalty, self.dictionary
@@ -328,11 +314,10 @@ class IrBaselineAgent(Agent):
         """
         path = self.opt.get('model_file', None) if path is None else path
         if path:
-            self.dictionary.save(path + '.dict')
-            data = {}
-            data['opt'] = self.opt
+            self.dictionary.save(f'{path}.dict')
+            data = {'opt': self.opt}
             torch_utils.atomic_save(data, path)
-            with PathManager.open(path + '.opt', 'w') as handle:
+            with PathManager.open(f'{path}.opt', 'w') as handle:
                 json.dump(self.opt, handle)
 
     def build_query_representation(self, query):
@@ -344,9 +329,8 @@ class IrBaselineAgent(Agent):
         :returns: dictionary containing 'words' dictionary (token => frequency)
                   and 'norm' float (square root of the number of tokens)
         """
-        rep = {}
-        rep['words'] = {}
-        words = [w for w in self.dictionary.tokenize(query.lower())]
+        rep = {'words': {}}
+        words = list(self.dictionary.tokenize(query.lower()))
         rw = rep['words']
         used = {}
         for w in words:

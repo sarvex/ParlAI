@@ -55,7 +55,7 @@ def build_cands(opt):
     world = create_task(opt, agent)
     if opt['outfile'] is None:
         outfile = tempfile.mkstemp(
-            prefix='{}_{}_'.format(opt['task'], opt['datatype']), suffix='.txt'
+            prefix=f"{opt['task']}_{opt['datatype']}_", suffix='.txt'
         )[1]
     else:
         outfile = opt['outfile']
@@ -87,9 +87,8 @@ def build_cands(opt):
         if world.epoch_done():
             logging.info('epoch done')
             break
-    fw = open(outfile, 'w')
-    fw.write('\n'.join(cands))
-    fw.close()
+    with open(outfile, 'w') as fw:
+        fw.write('\n'.join(cands))
 
 
 @register_script('build_candidates', hidden=True)

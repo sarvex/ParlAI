@@ -75,16 +75,14 @@ class ImageLoader:
             elif 'faster_r_cnn_152_32x8d' in self.image_mode:
                 self._init_faster_r_cnn()
             else:
-                raise RuntimeError(
-                    'Image mode {} not supported'.format(self.image_mode)
-                )
+                raise RuntimeError(f'Image mode {self.image_mode} not supported')
 
     @classmethod
     def is_spatial(cls, image_mode: str):
         """
         Return if image mode has spatial dimensionality.
         """
-        return any([s in image_mode for s in ['spatial', 'faster_r_cnn']])
+        return any(s in image_mode for s in ['spatial', 'faster_r_cnn'])
 
     def _init_transform(self):
         # initialize the transform function using torch vision.
@@ -167,8 +165,7 @@ class ImageLoader:
     def _image_mode_switcher(self):
         if self.image_mode not in IMAGE_MODE_SWITCHER:
             raise NotImplementedError(
-                'image preprocessing mode'
-                + '{} not supported yet'.format(self.image_mode)
+                f'image preprocessing mode{self.image_mode} not supported yet'
             )
 
         return IMAGE_MODE_SWITCHER.get(self.image_mode)
@@ -223,10 +220,10 @@ class ImageLoader:
             task = self.opt['task']
             prepath = os.path.join(self.opt['datapath'], task)
             imagefn = ''.join(zipname.strip('.zip').split('/')[-2:]) + path.name
-            return prepath, imagefn
         else:
             prepath, imagefn = os.path.split(path)
-            return prepath, imagefn
+
+        return prepath, imagefn
 
     def _load_image(self, path):
         """
@@ -265,9 +262,8 @@ class ImageLoader:
         new_path = os.path.join(prepath, mode, imagefn)
         if not PathManager.exists(new_path):
             return self.extract(self._load_image(path), new_path)
-        else:
-            with PathManager.open(new_path, 'rb') as f:
-                return torch.load(f)
+        with PathManager.open(new_path, 'rb') as f:
+            return torch.load(f)
 
 
 class DetectronFeatureExtractor:
@@ -360,8 +356,8 @@ class DetectronFeatureExtractor:
         im_shape = im.shape
         im_height = im_shape[0]
         im_width = im_shape[1]
-        im_size_min = np.min(im_shape[0:2])
-        im_size_max = np.max(im_shape[0:2])
+        im_size_min = np.min(im_shape[:2])
+        im_size_max = np.max(im_shape[:2])
 
         # Scale based on minimum size
         im_scale = self.MIN_SIZE / im_size_min
@@ -422,12 +418,12 @@ class DetectronFeatureExtractor:
         feat_list = []
         info_list = []
 
+        start_index = 1
         for i in range(batch_size):
             dets = output[0]["proposals"][i].bbox / im_scales[i]
             scores = score_list[i]
             max_conf = torch.zeros(scores.shape[0]).to(cur_device)
             conf_thresh_tensor = torch.full_like(max_conf, conf_thresh)
-            start_index = 1
             # Column 0 of the scores matrix is for the background class
             for cls_ind in range(start_index, scores.shape[1]):
                 cls_scores = scores[:, cls_ind]
