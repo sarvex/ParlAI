@@ -10,9 +10,9 @@
   "keywords": [],
   "author": "",
   "dependencies": {
-    "antd": "^4.16.13",
-    "@ant-design/icons": "^4.6.4",
-    "bootstrap": "^4.3.1",
+    "antd": "4.24.13",
+    "@ant-design/icons": "4.8.1",
+    "bootstrap": "4.6.2",
     "mephisto-task": "2.0.1",
     "react": "16.13.1",
     "react-bootstrap": "^0.32.4",
@@ -20,20 +20,20 @@
     "react-markdown": "^3.6.0",
     "react-tracking": "^9.0.0",
     "react-visibility-sensor": "^5.1.1",
-    "serialize-javascript": "^3.1.0"
+    "serialize-javascript": "3.1.0"
   },
   "devDependencies": {
-    "@babel/cli": "^7.1.0",
-    "@babel/core": "^7.1.0",
-    "@babel/plugin-proposal-class-properties": "^7.1.0",
-    "@babel/preset-env": "^7.1.0",
-    "@babel/preset-react": "^7.0.0",
-    "babel-loader": "^8.0.2",
-    "css-loader": "^1.0.0",
-    "file-loader": "^6.0.0",
-    "style-loader": "^0.23.0",
-    "url-loader": "^2.0.1",
-    "webpack": "^4.19.1",
-    "webpack-cli": "^3.1.1"
+    "@babel/cli": "7.22.10",
+    "@babel/core": "7.22.11",
+    "@babel/plugin-proposal-class-properties": "7.18.6",
+    "@babel/preset-env": "7.22.14",
+    "@babel/preset-react": "7.22.5",
+    "babel-loader": "8.3.0",
+    "css-loader": "1.0.1",
+    "file-loader": "6.2.0",
+    "style-loader": "0.23.1",
+    "url-loader": "2.3.0",
+    "webpack": "4.46.0",
+    "webpack-cli": "3.3.12"
   }
 }
