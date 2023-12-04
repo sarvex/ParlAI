@@ -37,7 +37,7 @@ requests<3,>=2.21.0
 scipy==1.10.0
 sh==1.12.14
 sphinx_rtd_theme==0.4.3
-sphinx-autodoc-typehints~=1.10.3
+sphinx-autodoc-typehints~=1.25.2
 Sphinx~=5.1.0
 subword-nmt==0.3.7
 tensorboardX<=2.5.0
