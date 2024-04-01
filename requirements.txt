@@ -40,7 +40,7 @@ sphinx_rtd_theme==0.4.3
 sphinx-autodoc-typehints~=1.10.3
 Sphinx~=5.1.0
 subword-nmt==0.3.7
-tensorboardX<=2.5.0
+tensorboardX<=2.6.2.2
 tokenizers>=0.13.3
 tomli>=2.0.0
 torchtext==0.15.1
