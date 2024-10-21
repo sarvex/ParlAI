@@ -36,7 +36,7 @@ requests<3,>=2.21.0
 # scikit-learn==0.23.1
 scipy==1.10.0
 sh==1.12.14
-sphinx_rtd_theme==0.4.3
+sphinx_rtd_theme==3.0.1
 sphinx-autodoc-typehints~=1.10.3
 Sphinx~=5.1.0
 subword-nmt==0.3.7
