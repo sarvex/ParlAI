@@ -30,7 +30,7 @@ pyyaml==5.4
 pyzmq==18.1.0
 regex>=2021.8.3
 myst-parser<1
-attrs~=20.2.0
+attrs~=25.4.0
 requests-mock==1.7.0
 requests<3,>=2.21.0
 # scikit-learn==0.23.1
